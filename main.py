@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 # OpenAI키설정
 load_dotenv()  # .env 파일 불러오기
-api_key = os.getenv("OPENAI_API_KEY")
+client = os.getenv("OPENAI_API_KEY")
 
 # 카테고리
 categories = {
