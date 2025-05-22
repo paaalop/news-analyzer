@@ -6,8 +6,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 
 # OpenAI키설정
-load_dotenv()  # .env 파일 불러오기
-client = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # 카테고리
 categories = {
@@ -16,8 +15,17 @@ categories = {
     "사회": "102",
     "생활/문화": "103",
     "세계": "104",
-    "IT/과학": "105"
+    "IT/과학": "105",
 }
+
+# 서브 카테고리
+subcategories = [
+    "인공지능",
+    "반도체/하드웨어",
+    "모바일/통신",
+    "소프트웨어/인터넷",
+    "과학일반/기술",
+]
 
 base_url = "https://news.naver.com/section/"
 headers = {"User-Agent": "Mozilla/5.0"}
@@ -41,13 +49,14 @@ print("카테고리:")
 for name in categories:
     print(f"- {name}")
 
-choice = input("카테고리와 기사 수를 입력하세요 (예: 정치,10): ")
+# choice = input("카테고리와 기사 수를 입력하세요 (예: 정치,10): ")
+choice = "IT/과학,10"
 try:
     selected_category, count_str = [x.strip() for x in choice.split(",")]
     sid = categories.get(selected_category)
     count = int(count_str)
 except:
-    print("잘못 입력하셨습니다다.")
+    print("잘못 입력하셨습니다.")
     exit()
 
 if not sid:
@@ -84,11 +93,17 @@ for i in articles:
 
         # 작성시간
         time_tag = article_soup.select_one("span.media_end_head_info_datestamp_time")
-        publish_time = time_tag["data-date-time"] if time_tag and time_tag.has_attr("data-date-time") else "Unknown"
+        publish_time = (
+            time_tag["data-date-time"]
+            if time_tag and time_tag.has_attr("data-date-time")
+            else "Unknown"
+        )
 
         # 기자
         journalist_tag = article_soup.select_one("em.media_end_head_journalist_name")
-        journalist = journalist_tag.get_text(strip=True) if journalist_tag else "Unknown"
+        journalist = (
+            journalist_tag.get_text(strip=True) if journalist_tag else "Unknown"
+        )
 
         # 언론사
         press_tag = article_soup.select_one("span.media_end_head_top_logo_text")
@@ -101,7 +116,9 @@ for i in articles:
             continue
 
         paragraphs = content_area.find_all("p")
-        content_text = " ".join(p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True))
+        content_text = " ".join(
+            p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)
+        )
         if not content_text:
             content_text = content_area.get_text(strip=True)
 
@@ -110,21 +127,59 @@ for i in articles:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "뉴스 요약 시스템이다. 사용자가 입력한 기사를 핵심내용으로 요약해."},
-                {"role": "user", "content": prompt}
+                {
+                    "role": "system",
+                    "content": "뉴스 요약 시스템이다. 사용자가 입력한 기사를 핵심내용으로 요약해.",
+                },
+                {"role": "user", "content": prompt},
             ],
             temperature=0.5,
         )
 
         summary = response.choices[0].message.content.strip()
 
+        prompt_classify = f"""다음 뉴스 기사 요약을 읽고, 아래 5개의 세부 카테고리 중 가장 적절한 것을 정확히 한 단어로만 출력해.
+
+카테고리 목록:
+1. 인공지능
+2. 반도체/하드웨어
+3. 모바일/통신
+4. 소프트웨어/인터넷
+5. 과학일반/기술
+
+뉴스 요약:
+{summary}
+
+출력 형식: 세부카테고리: [선택된 카테고리 이름]
+"""
+        response_classify = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "뉴스 기사 요약을 기반으로 세부 카테고리를 분류하는 시스템이다.",
+                },
+                {"role": "user", "content": prompt_classify},
+            ],
+            temperature=0,
+        )
+        classify_result = response_classify.choices[0].message.content.strip()
+        subcategory = (
+            classify_result.split(":")[-1].strip()
+            if ":" in classify_result
+            else "Unknown"
+        )
+
         # 자극성, 연관성 평가
         prompt_eval = f"뉴스 제목: {title}\n\n뉴스 본문: {content_text}\n\n1. 이 제목의 자극성을 10점 만점으로 평가해 다른 문자 없이 '자극성 :(점수)'로만 표현해줘. (점수가 높을수록 자극적. 보통의 자극도일 경우 5점으로 해줘)2. 이 제목이 뉴스 본문과 얼마나 연관 있는지 100점 만점으로 평가해 다른 문자 없이 '연관성 :(점수)'로만 표현해. 1번 2번 답은 줄을 바꿔서 출력해줘줘"
         response_eval = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "넌 뉴스 제목을 분석,평가하는 시스템이다."},
-                {"role": "user", "content": prompt_eval}
+                {
+                    "role": "system",
+                    "content": "넌 뉴스 제목을 분석,평가하는 시스템이다.",
+                },
+                {"role": "user", "content": prompt_eval},
             ],
             temperature=0.3,
         )
@@ -138,17 +193,20 @@ for i in articles:
             elif "연관성" in line:
                 relevance_score = line.split(":")[-1].strip()
 
-        new_articles.append({
-            "언론사": press,
-            "카테고리": selected_category,
-            "제목": title,
-            "URL": link,
-            "발행시간": publish_time,
-            "기자": journalist,
-            "요약": summary,
-            "자극성(10점)": headline_score,
-            "연관성(100점)": relevance_score
-        })
+        new_articles.append(
+            {
+                "언론사": press,
+                "카테고리": selected_category,
+                "세부카테고리": subcategory,
+                "제목": title,
+                "URL": link,
+                "발행시간": publish_time,
+                "기자": journalist,
+                "요약": summary,
+                "자극성(10점)": headline_score,
+                "연관성(100점)": relevance_score,
+            }
+        )
 
         print(f"수집 및 요약 완료: {title}")
 
