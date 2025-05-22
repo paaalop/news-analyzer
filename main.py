@@ -3,9 +3,11 @@ from bs4 import BeautifulSoup
 import os
 import json
 from openai import OpenAI
+from dotenv import load_dotenv
 
 # OpenAI키설정
-client = OpenAI(api_key="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")
+load_dotenv()  # .env 파일 불러오기
+api_key = os.getenv("OPENAI_API_KEY")
 
 # 카테고리
 categories = {
