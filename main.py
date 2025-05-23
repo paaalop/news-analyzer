@@ -9,22 +9,25 @@ from dotenv import load_dotenv
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # 카테고리
-categories = {
-    "정치": "100",
-    "경제": "101",
-    "사회": "102",
-    "생활/문화": "103",
-    "세계": "104",
-    "IT/과학": "105",
-}
+# categories = {
+#     "정치": "100",
+#     "경제": "101",
+#     "사회": "102",
+#     "생활/문화": "103",
+#     "세계": "104",
+#     "IT/과학": "105",
+# }
 
 # 서브 카테고리
 subcategories = [
-    "인공지능",
-    "반도체/하드웨어",
-    "모바일/통신",
-    "소프트웨어/인터넷",
-    "과학일반/기술",
+    "모바일",
+    "인터넷/SNS",
+    "통신/뉴미디어",
+    "IT일반",
+    "과학일반",
+    "보안/해킹",
+    "컴퓨터",
+    "게임/리뷰"
 ]
 
 base_url = "https://news.naver.com/section/"
@@ -45,15 +48,15 @@ else:
     data = []
 
 # 크롤링 범위 묻기
-print("카테고리:")
-for name in categories:
-    print(f"- {name}")
+# print("카테고리:")
+# for name in categories:
+#     print(f"- {name}")
 
 # choice = input("카테고리와 기사 수를 입력하세요 (예: 정치,10): ")
-choice = "IT/과학,10"
+choice = "IT/과학,5"
 try:
     selected_category, count_str = [x.strip() for x in choice.split(",")]
-    sid = categories.get(selected_category)
+    sid = "105"
     count = int(count_str)
 except:
     print("잘못 입력하셨습니다.")
@@ -73,6 +76,9 @@ print(f"[{selected_category}] 총 기사 수: {len(articles)}")
 
 # 기사 처리
 new_articles = []
+
+
+
 for i in articles:
     if len(new_articles) >= count:
         break
@@ -138,19 +144,15 @@ for i in articles:
 
         summary = response.choices[0].message.content.strip()
 
-        prompt_classify = f"""다음 뉴스 기사 요약을 읽고, 아래 5개의 세부 카테고리 중 가장 적절한 것을 정확히 한 단어로만 출력해.
+        prompt_classify = f"""다음 뉴스 기사 요약을 읽고, 아래 8개의 세부 카테고리 중 가장 적절한 것을 정확히 한 단어로만 출력해.
 
 카테고리 목록:
-1. 인공지능
-2. 반도체/하드웨어
-3. 모바일/통신
-4. 소프트웨어/인터넷
-5. 과학일반/기술
+{subcategories}
 
 뉴스 요약:
 {summary}
 
-출력 형식: 세부카테고리: [선택된 카테고리 이름]
+출력 형식: 카테고리: (선택된 카테고리 이름)
 """
         response_classify = client.chat.completions.create(
             model="gpt-3.5-turbo",
@@ -171,7 +173,7 @@ for i in articles:
         )
 
         # 자극성, 연관성 평가
-        prompt_eval = f"뉴스 제목: {title}\n\n뉴스 본문: {content_text}\n\n1. 이 제목의 자극성을 10점 만점으로 평가해 다른 문자 없이 '자극성 :(점수)'로만 표현해줘. (점수가 높을수록 자극적. 보통의 자극도일 경우 5점으로 해줘)2. 이 제목이 뉴스 본문과 얼마나 연관 있는지 100점 만점으로 평가해 다른 문자 없이 '연관성 :(점수)'로만 표현해. 1번 2번 답은 줄을 바꿔서 출력해줘줘"
+        prompt_eval = f"뉴스 제목: {title}\n\n뉴스 본문: {content_text}\n\n1. 이 제목의 자극성을 10점 만점으로 평가해 다른 문자 없이 '자극성 :(점수)'로만 표현해줘. (점수가 높을수록 자극적. 보통의 자극도일 경우 5점으로 해줘)2. 이 제목이 뉴스 본문과 얼마나 연관 있는지 100점 만점으로 평가해 다른 문자 없이 '연관성 :(점수)'로만 표현해. 1번 2번 답은 줄을 바꿔서 출력해줘"
         response_eval = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -196,7 +198,6 @@ for i in articles:
         new_articles.append(
             {
                 "언론사": press,
-                "카테고리": selected_category,
                 "세부카테고리": subcategory,
                 "제목": title,
                 "URL": link,

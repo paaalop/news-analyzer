@@ -4,26 +4,32 @@ from collections import defaultdict
 
 app = Flask(__name__)
 
-# JSON 파일 로드
-with open("네이버뉴스데이터.json", "r", encoding="utf-8") as f:
-    articles = json.load(f)
-
-# 세부카테고리 리스트
+# 새로운 세부카테고리 리스트
 subcategories = [
-    "인공지능",
-    "반도체/하드웨어",
-    "모바일/통신",
-    "소프트웨어/인터넷",
-    "과학일반/기술",
+    "모바일",
+    "인터넷/SNS",
+    "통신/뉴미디어",
+    "IT일반",
+    "과학일반",
+    "보안/해킹",
+    "컴퓨터",
+    "게임/리뷰"
 ]
 
-# 세부카테고리별 기사 인덱스 저장
-grouped_articles = defaultdict(list)
-for idx, article in enumerate(articles):
-    sub = article.get("세부카테고리", "기타")
-    grouped_articles[sub].append((idx, article))
+# 매 요청마다 JSON 파일을 다시 로드하는 함수
+def load_articles():
+    with open("네이버뉴스데이터.json", "r", encoding="utf-8") as f:
+        return json.load(f)
 
-# HTML 템플릿
+# 기사들을 세부카테고리 기준으로 그룹화하는 함수
+def group_articles(articles):
+    grouped = defaultdict(list)
+    for idx, article in enumerate(articles):
+        sub = article.get("세부카테고리", "기타")
+        grouped[sub].append((idx, article))
+    return grouped
+
+# 메인 페이지 템플릿
 main_template = """
 <!DOCTYPE html>
 <html>
@@ -36,6 +42,7 @@ main_template = """
             background-color: #333;
             padding: 10px;
             display: flex;
+            flex-wrap: wrap;
             gap: 10px;
         }
         nav a {
@@ -83,7 +90,7 @@ main_template = """
 </html>
 """
 
-# 기사 상세 페이지는 이전과 동일
+# 기사 상세 페이지 템플릿
 article_template = """
 <!DOCTYPE html>
 <html>
@@ -101,12 +108,11 @@ article_template = """
     <p><strong>자극성(10점):</strong> {{ article['자극성(10점)'] }}<br>
        <strong>연관성(100점):</strong> {{ article['연관성(100점)'] }}</p>
     <p><strong>언론사:</strong> {{ article['언론사'] }}<br>
-       <strong>카테고리:</strong> {{ article['카테고리'] }} / {{ article.get('세부카테고리', '미분류') }}<br>
+       <strong>카테고리:</strong> {{ article.get('세부카테고리', '미분류') }}<br>
        <strong>발행시간:</strong> {{ article['발행시간'] }}<br>
        <strong>기자:</strong> {{ article['기자'] }}</p>
     <p><strong>요약:</strong> {{ article['요약'] }}</p>
     <hr>
-    <iframe src="{{ article['URL'] }}" width="100%" height="800px"></iframe>
     <br><a href="/">← 목록으로 돌아가기</a>
 </body>
 </html>
@@ -114,6 +120,8 @@ article_template = """
 
 @app.route("/")
 def index():
+    articles = load_articles()
+    grouped_articles = group_articles(articles)
     selected_category = request.args.get("category", subcategories[0])
     selected_articles = grouped_articles.get(selected_category, [])
     return render_template_string(
@@ -125,9 +133,10 @@ def index():
 
 @app.route("/article/<int:idx>")
 def show_article(idx):
+    articles = load_articles()
     if 0 <= idx < len(articles):
         return render_template_string(article_template, article=articles[idx])
     return "기사 없음", 404
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
