@@ -7,16 +7,23 @@ from dotenv import load_dotenv
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-model_version = "gpt-4o"
+model_version = "gpt-4.1-mini"
 
 subcategories = [
-    "모바일", "인터넷/SNS", "통신/뉴미디어", "IT일반",
-    "과학일반", "보안/해킹", "컴퓨터", "게임/리뷰"
+    "모바일",
+    "인터넷/SNS",
+    "통신/뉴미디어",
+    "IT일반",
+    "과학일반",
+    "보안/해킹",
+    "컴퓨터",
+    "게임/리뷰",
 ]
 
 base_url = "https://news.naver.com/section/"
 headers = {"User-Agent": "Mozilla/5.0"}
-json_file = "articles.json"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+json_file = os.path.join(BASE_DIR, "articles.json")
 selected_category = "IT/과학"
 sid = "105"
 count = 40
@@ -80,7 +87,9 @@ for i in articles:
         continue
 
     paragraphs = content_area.find_all("p")
-    content_text = " ".join(p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True))
+    content_text = " ".join(
+        p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)
+    )
     if not content_text:
         content_text = content_area.get_text(strip=True)
 
@@ -88,42 +97,70 @@ for i in articles:
     response = client.chat.completions.create(
         model=model_version,
         messages=[
-            {"role": "system", "content": "뉴스 요약 시스템이다. 사용자가 입력한 기사를 핵심내용으로 요약해."},
+            {
+                "role": "system",
+                "content": "뉴스 요약 시스템이다. 사용자가 입력한 기사를 핵심내용으로 요약해.",
+            },
             {"role": "user", "content": prompt},
         ],
         temperature=0.5,
     )
     summary = response.choices[0].message.content.strip()
 
-    prompt_classify = f"""다음 뉴스 기사 요약을 읽고, 아래 8개의 세부 카테고리 중 가장 적절한 것을 정확히 한 단어로만 출력해. 카테고리를 지정하지 않을 수는 없어.
+    subcategories_str = "\n".join(subcategories)
+    prompt_classify = f"""다음 뉴스 기사 요약을 읽고, 반드시 아래 8개의 세부 카테고리 중 하나를 골라 **정확히 그 이름만 사용해** 출력하라.
+반드시 아래 목록 중 하나만 선택해야 하며, 다른 표현이나 유사어를 쓰지 마라.
+
+출력 형식 (이외 다른 문자 금지):
+카테고리: (선택된 카테고리 이름)
 
 카테고리 목록:
-{subcategories}
+{subcategories_str}
 
 뉴스 요약:
 {summary}
-
-출력 형식: 카테고리: (선택된 카테고리 이름)
 """
+
     response_classify = client.chat.completions.create(
         model=model_version,
         messages=[
-            {"role": "system", "content": "뉴스 기사 요약을 기반으로 세부 카테고리를 분류하는 시스템이다."},
+            {
+                "role": "system",
+                "content": "뉴스 기사 요약을 기반으로 세부 카테고리를 분류하는 시스템이다.",
+            },
             {"role": "user", "content": prompt_classify},
         ],
         temperature=0,
     )
     classify_result = response_classify.choices[0].message.content.strip()
-    subcategory = classify_result.split(":")[-1].strip() if ":" in classify_result else "Unknown"
+    subcategory = (
+        classify_result.split(":")[-1].strip() if ":" in classify_result else "Unknown"
+    )
 
-    prompt_eval = f"뉴스 제목: {title}\n\n뉴스 본문: {content_text}\n\n1. 이 제목의 자극성을 10점 만점으로 평가해 다른 문자 없이 '자극성 :(점수)'로만 표현해줘. (점수가 높을수록 자극적. 보통의 자극도일 경우 5점으로 해줘)\n2. 이 제목이 뉴스 본문과 얼마나 연관 있는지 100점 만점으로 평가해 다른 문자 없이 '연관성 :(점수)'로만 표현해. 1번 2번 답은 줄을 바꿔서 출력해줘"
+    prompt_eval = f"""뉴스 제목: {title}
+
+뉴스 본문:
+{content_text}
+
+다음 뉴스 제목과 본문을 바탕으로 두 가지 항목을 평가하라.
+
+1. 제목의 자극성을 10점 만점으로 평가하되, 점수가 높을수록 자극적이며, 보통 수준일 경우 5점으로 평가하라.
+2. 제목이 본문과 얼마나 관련 있는지를 100점 만점으로 평가하라.
+
+출력 형식은 반드시 다음과 같이 정확히 두 줄로 작성하라.  
+점수 외에는 설명, 기호, 문장 등을 포함하지 말고 아래 양식을 그대로 따를 것:
+
+자극성: (숫자)
+연관성: (숫자)
+"""
+
     response_eval = client.chat.completions.create(
         model=model_version,
         messages=[
             {"role": "system", "content": "넌 뉴스 제목을 분석,평가하는 시스템이다."},
             {"role": "user", "content": prompt_eval},
         ],
-        temperature=0.3,
+        temperature=0,
     )
     eval_text = response_eval.choices[0].message.content.strip()
 
@@ -135,17 +172,19 @@ for i in articles:
         elif "연관성" in line:
             relevance_score = line.split(":")[-1].strip()
 
-    new_articles.append({
-        "언론사": press,
-        "세부카테고리": subcategory,
-        "제목": title,
-        "URL": link,
-        "발행시간": publish_time,
-        "기자": journalist,
-        "요약": summary,
-        "자극성(10점)": headline_score,
-        "연관성(100점)": relevance_score,
-    })
+    new_articles.append(
+        {
+            "언론사": press,
+            "세부카테고리": subcategory,
+            "제목": title,
+            "URL": link,
+            "발행시간": publish_time,
+            "기자": journalist,
+            "요약": summary,
+            "자극성(10점)": headline_score,
+            "연관성(100점)": relevance_score,
+        }
+    )
 
     print(f"수집 및 요약 완료: {title}")
 
