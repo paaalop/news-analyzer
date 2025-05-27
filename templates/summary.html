@@ -1,0 +1,19 @@
+{% extends 'base.html' %} {# base.html 상속 #}
+
+{% block content %}
+<div class="summary-content">
+    <h2>오늘의 뉴스</h2>
+    {% if summary_data %}
+        {% for item in summary_data %}
+            {% for date, summary in item.items() %}
+                <div class="summary-list-item">
+                    <h3>{{ date }}</h3>
+                    <pre>{{ summary }}</pre>
+                </div>
+            {% endfor %}
+        {% endfor %}
+    {% else %}
+        <p>오늘의 뉴스 요약이 없습니다.</p>
+    {% endif %}
+</div>
+{% endblock %}

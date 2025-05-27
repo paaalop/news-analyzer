@@ -1,0 +1,28 @@
+{% extends 'base.html' %} {# base.html 상속 #}
+
+{% block content %}
+<h1 class="article-detail-title">{{ article['제목'] }}</h1>
+
+<div class="article-detail-meta">
+    <span><strong>카테고리:</strong> {{ article.get('세부카테고리', '미분류') }}</span>
+    <span><strong>언론사:</strong> {{ article['언론사'] }}</span>
+    <span><strong>기자:</strong> {{ article['기자'] }}</span>
+    <span><strong>발행시간:</strong> {{ article['발행시간'] }}</span>
+</div>
+
+<hr class="section-divider">
+
+<div class="article-detail-summary-block">
+    <strong>요약:</strong>
+    <p>{{ article['요약'] }}</p>
+</div>
+
+<hr class="section-divider">
+
+<div class="article-detail-content">
+    <p><strong>자극성(10점):</strong> {{ article['자극성(10점)'] }}</p>
+    <p><strong>연관성(100점):</strong> {{ article['연관성(100점)'] }}</p>
+</div>
+
+<a href="/" class="back-link">← 목록으로 돌아가기</a>
+{% endblock %}
