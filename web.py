@@ -89,7 +89,7 @@ def index():
 def summary():
     load_if_modified()
     return render_template("summary.html", subcategories=SUBCATEGORIES,
-                           selected_category="오늘의 뉴스",
+                           selected_category="어제 요약",
                            summary_data=SUMMARY_DATA)
 
 @app.route("/article/<int:idx>")

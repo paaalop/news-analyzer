@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="summary-content">
-    <h2>오늘의 뉴스</h2>
+    <h2>어제 요약</h2>
     {% if summary_data %}
         {% for item in summary_data %}
             {% for date, summary in item.items() %}
@@ -13,7 +13,7 @@
             {% endfor %}
         {% endfor %}
     {% else %}
-        <p>오늘의 뉴스 요약이 없습니다.</p>
+        <p>어제 요약이 없습니다.</p>
     {% endif %}
 </div>
 {% endblock %}
