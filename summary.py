@@ -51,17 +51,21 @@ summary_text = response.choices[0].message.content
 
 
 summary_file = "summary.json"
+
 try:
     with open(summary_file, "r", encoding="utf-8") as f:
         summary_data = json.load(f)
-except FileNotFoundError:
-    summary_data = {}
+        if not isinstance(summary_data, list):
+            raise ValueError("summary.json은 리스트 형식이어야 합니다.")
+except (FileNotFoundError, ValueError, json.JSONDecodeError):
+    summary_data = []
 
-
-summary_data[yesterday_str] = summary_text
-
+# 어제 날짜 요약 덮어쓰기 (기존에 있으면 제거)
+summary_data = [entry for entry in summary_data if yesterday_str not in entry]
+summary_data.append({yesterday_str: summary_text})
 
 with open(summary_file, "w", encoding="utf-8") as f:
     json.dump(summary_data, f, indent=2, ensure_ascii=False)
 
 print(f"요약 저장 완료: {summary_file}")
+
