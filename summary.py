@@ -50,7 +50,8 @@ response = client.chat.completions.create(
 summary_text = response.choices[0].message.content
 
 
-summary_file = "summary.json"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+json_file = os.path.join(BASE_DIR, "summary.json")
 
 try:
     with open(summary_file, "r", encoding="utf-8") as f:
