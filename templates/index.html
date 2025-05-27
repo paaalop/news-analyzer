@@ -1,37 +1,40 @@
-{% extends 'base.html' %} {# base.html 상속 #}
+{% extends 'base.html' %}
 
 {% block content %}
 <h2>{{ selected_category }}</h2>
 {% if selected_articles %}
-    <ul>
-        {% for idx, article in selected_articles %}
-            <li class="article-list-item">
-                <div class="article-item">
-                    {# 연관성 점수 색상 계산: 70점 이하는 빨강(0), 70점 초과부터 100점까지는 0~120(빨강->초록)으로 매핑 #}
-                    {% set relevance_score = article['연관성(100점)'] %}
-                    {% set relevance_hue = 0 %} {# 기본값 빨강 (0) #}
-                    {% if relevance_score > 70 %}
-                        {# 70점을 0으로, 100점을 120으로 매핑 #}
-                        {% set normalized_relevance = (relevance_score - 70) / 30 %} {# 0.0 (70점) ~ 1.0 (100점) #}
-                        {% set relevance_hue = 120 * normalized_relevance %} {# 0 (70점) ~ 120 (100점) #}
-                    {% endif %}
-                    <div class="relevance-dot" style="--relevance-hue: {{ relevance_hue }};">{{ relevance_score }}</div>
+<ul>
+    {% for idx, article in selected_articles %}
+    <li class="article-list-item">
+        <div class="article-item">
+            <div class="relevance-dot" style="--relevance-hue: {{ article.relevance_hue }}">{{ article['연관성(100점)'] }}
+            </div>
+            <div class="stimulus-dot" style="--stimulus-hue: {{ article.stimulus_hue }}">{{ article['자극성(10점)'] }}</div>
 
-                    {# 자극성 점수 색상 계산: 0점은 초록(120), 10점은 빨강(0)으로 매핑 (낮을수록 초록) #}
-                    {% set stimulus_score = article['자극성(10점)'] %}
-                    {% set stimulus_hue = 120 - (stimulus_score / 10) * 120 %}
-                    <div class="stimulus-dot" style="--stimulus-hue: {{ stimulus_hue }};">{{ stimulus_score }}</div>
-                    
-                    <a href="/article/{{ idx }}" class="article-title-link">{{ article['제목'] }}</a>
-                </div>
-                <small class="article-summary">{{ article['요약'] }}</small>
-            </li>
-            {% if not loop.last %}
-                <hr class="article-divider">
-            {% endif %}
-        {% endfor %}
-    </ul>
+
+            <a href="/article/{{ idx }}" class="article-title-link">{{ article['제목'] }}</a>
+        </div>
+        <small class="article-summary">{{ article['요약'] }}</small>
+    </li>
+    {% if not loop.last %}
+    <hr class="article-divider">
+    {% endif %}
+    {% endfor %}
+</ul>
+
+{# 페이지네이션 추가 #}
+{% if total_pages > 1 %}
+<div class="pagination">
+    {% for p in range(1, total_pages + 1) %}
+    {% if p == current_page %}
+    <strong>[{{ p }}]</strong>
+    {% else %}
+    <a href="/?category={{ selected_category }}&page={{ p }}">[{{ p }}]</a>
+    {% endif %}
+    {% endfor %}
+</div>
+{% endif %}
 {% else %}
-    <p>해당 카테고리의 기사가 없습니다.</p>
+<p>해당 카테고리의 기사가 없습니다.</p>
 {% endif %}
 {% endblock %}
