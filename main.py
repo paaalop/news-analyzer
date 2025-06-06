@@ -4,24 +4,13 @@ import os
 import json
 from openai import OpenAI
 from dotenv import load_dotenv
-import mysql.connector
 import pymysql
 
 load_dotenv()
 # OpenAI키설정
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+model_version = "gpt-4.1-mini"
 
-# 카테고리
-# categories = {
-#     "정치": "100",
-#     "경제": "101",
-#     "사회": "102",
-#     "생활/문화": "103",
-#     "세계": "104",
-#     "IT/과학": "105",
-# }
-
-# 서브 카테고리
 subcategories = [
     "모바일",
     "인터넷/SNS",
@@ -122,7 +111,7 @@ for i in articles:
         # GPT로 요약
         prompt = f"다음 뉴스 기사를 한국어로 핵심만 간단히 요약해:\n\n{content_text}"
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model=model_version,
             messages=[
                 {
                     "role": "system",
@@ -135,18 +124,21 @@ for i in articles:
 
         summary = response.choices[0].message.content.strip()
 
-        prompt_classify = f"""다음 뉴스 기사 요약을 읽고, 아래 8개의 세부 카테고리 중 가장 적절한 것을 정확히 한 단어로만 출력해.
+        prompt_classify = f"""다음 뉴스 기사 요약을 읽고, 반드시 아래 8개의 세부 카테고리 중 하나를 골라 **정확히 그 이름만 사용해** 출력하라.
+반드시 아래 목록 중 하나만 선택해야 하며, 다른 표현이나 유사어를 쓰지 마라.
+
+출력 형식 (이외 다른 문자 금지):
+카테고리: (선택된 카테고리 이름)
 
 카테고리 목록:
-{subcategories}
+{subcategories_str}
 
 뉴스 요약:
 {summary}
-
-출력 형식: 카테고리: (선택된 카테고리 이름)
 """
+
         response_classify = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model=model_version,
             messages=[
                 {
                     "role": "system",
@@ -164,9 +156,25 @@ for i in articles:
         )
 
         # 자극성, 연관성 평가
-        prompt_eval = f"뉴스 제목: {title}\n\n뉴스 본문: {content_text}\n\n1. 이 제목의 자극성을 10점 만점으로 평가해 다른 문자 없이 '자극성 :(점수)'로만 표현해줘. (점수가 높을수록 자극적. 보통의 자극도일 경우 5점으로 해줘)2. 이 제목이 뉴스 본문과 얼마나 연관 있는지 100점 만점으로 평가해 다른 문자 없이 '연관성 :(점수)'로만 표현해. 1번 2번 답은 줄을 바꿔서 출력해줘"
-        response_eval = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+        prompt_eval = f"""뉴스 제목: {title}
+
+뉴스 본문:
+{content_text}
+
+다음 뉴스 제목과 본문을 바탕으로 두 가지 항목을 평가하라.
+
+1. 제목의 자극성을 10점 만점으로 평가하되, 점수가 높을수록 자극적이며, 보통 수준일 경우 5점으로 평가하라.
+2. 제목이 본문과 얼마나 관련 있는지를 100점 만점으로 평가하라.
+
+출력 형식은 반드시 다음과 같이 정확히 두 줄로 작성하라.  
+점수 외에는 설명, 기호, 문장 등을 포함하지 말고 아래 양식을 그대로 따를 것:
+
+자극성: (숫자)
+연관성: (숫자)
+"""
+
+response_eval = client.chat.completions.create(
+            model=model_version,
             messages=[
                 {
                     "role": "system",
@@ -207,9 +215,9 @@ for i in articles:
         continue
 
 # 저장하기
-conn = mysql.connect(
+conn = pymysql.connect(
     host="youthdb.cjuwyyqya00c.ap-southeast-2.rds.amazonaws.com",
-    port="3306",
+    port=3306,
     user="admin",
     password="adminadmin",
     database="youthdb"

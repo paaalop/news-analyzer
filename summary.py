@@ -2,11 +2,12 @@ import json
 from datetime import datetime, timedelta
 from openai import OpenAI
 import os
-import mysql.connector
+import pymysql
 from dotenv import load_dotenv
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+model_version = "gpt-4.1-mini"
 
 # 어제 날짜
 today = datetime.now()
@@ -14,10 +15,11 @@ yesterday = today - timedelta(days=1)
 yesterday_str = yesterday.strftime("%Y-%m-%d")
 
 # DB
-conn = mysql.connector.connect(
-    host="localhost",
-    user="youth",
-    password="youth",
+conn = pymysql.connect(
+    host="youthdb.cjuwyyqya00c.ap-southeast-2.rds.amazonaws.com",
+    port=3306,
+    user="admin",
+    password="adminadmin",
     database="youthdb"
 )
 cursor = conn.cursor()
@@ -36,19 +38,46 @@ if not rows:
     conn.close()
     exit()
 
-#요약 프롬프트 생성
-titles = [f"{i+1}. {title}" for i, (title,) in enumerate(rows)]
-prompt = (
-   "다음은 하루 동안의 기술 뉴스 기사 요약들이다. "
-    "가장 많이 언급된 주제 순서대로 정리하여 하루의 뉴스 트렌드를 요약해.하루 동안의 기술 뉴스 트렌드를 정리하면 다음과 같습니다:와 같은 문구는 작성하지 말고 기사 요약내용만 작성해. 각 요약 앞에는 순서대로 숫자를 입력해\n\n"
-    + "\n\n".join(titles)
+# --- 100개씩 나눠 요약 (map 단계) ---
+CHUNK_SIZE = 100
+num_chunks = ceil(len(summaries) / CHUNK_SIZE)
+intermediate_summaries = []
+
+for i in range(num_chunks):
+    chunk = summaries[i * CHUNK_SIZE:(i + 1) * CHUNK_SIZE]
+    chunk_prompt = (
+        "다음은 하루 동안의 기술 뉴스 기사 요약들이다. "
+        "가장 많이 언급된 주제 순서대로 정리해줘. 각 항목 앞에 숫자를 붙여줘:\n\n"
+        + "\n\n".join(chunk)
+    )
+
+    print(f"[{i+1}/{num_chunks}] 청크 요약 중...")
+
+    chunk_response = client.chat.completions.create(
+        model=model_version,
+        messages=[
+            {"role": "system", "content": "너는 훌륭한 IT 뉴스 요약가야."},
+            {"role": "user", "content": chunk_prompt}
+        ],
+        temperature=0.5
+    )
+
+    intermediate_summaries.append(chunk_response.choices[0].message.content)
+
+# --- 최종 요약 (reduce 단계) ---
+final_prompt = (
+    "다음은 하루 동안의 기술 뉴스 요약 덩어리들이다. "
+    "중복되는 주제를 묶고, 가장 많이 언급된 순서대로 요약해줘. 각 항목 앞에 숫자를 붙여줘:\n\n"
+    + "\n\n".join(intermediate_summaries)
 )
 
-response = client.chat.completions.create(
-    model="gpt-4o",
+print("최종 요약 생성 중...")
+
+final_response = client.chat.completions.create(
+    model=model_version,
     messages=[
         {"role": "system", "content": "너는 훌륭한 IT 뉴스 요약가야."},
-        {"role": "user", "content": prompt}
+        {"role": "user", "content": final_prompt}
     ],
     temperature=0.5
 )
