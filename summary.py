@@ -4,6 +4,7 @@ from openai import OpenAI
 import os
 import pymysql
 from dotenv import load_dotenv
+from math import ceil
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -26,7 +27,7 @@ cursor = conn.cursor()
 
 #기사 제목들 불러오기
 sql = """
-SELECT title FROM newsdata
+SELECT summary FROM newsdata
 WHERE publish_time LIKE %s
 """
 cursor.execute(sql, (f"{yesterday_str}%",))
@@ -37,6 +38,9 @@ if not rows:
     cursor.close()
     conn.close()
     exit()
+
+#요약 프롬프트 생성
+summaries = [f"{i+1}. {summary}" for i, (summary,) in enumerate(rows)]
 
 # --- 100개씩 나눠 요약 (map 단계) ---
 CHUNK_SIZE = 100
