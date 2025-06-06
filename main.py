@@ -4,11 +4,24 @@ import os
 import json
 from openai import OpenAI
 from dotenv import load_dotenv
+import mysql.connector
+import pymysql
 
 load_dotenv()
+# OpenAI키설정
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-model_version = "gpt-4.1-mini"
 
+# 카테고리
+# categories = {
+#     "정치": "100",
+#     "경제": "101",
+#     "사회": "102",
+#     "생활/문화": "103",
+#     "세계": "104",
+#     "IT/과학": "105",
+# }
+
+# 서브 카테고리
 subcategories = [
     "모바일",
     "인터넷/SNS",
@@ -17,37 +30,45 @@ subcategories = [
     "과학일반",
     "보안/해킹",
     "컴퓨터",
-    "게임/리뷰",
+    "게임/리뷰"
 ]
 
 base_url = "https://news.naver.com/section/"
 headers = {"User-Agent": "Mozilla/5.0"}
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-json_file = os.path.join(BASE_DIR, "articles.json")
-selected_category = "IT/과학"
-sid = "105"
-count = 40
+json_file = "네이버뉴스데이터.json"
 
-existing_keys = set()
-data = []
-
+# 링크 중복 검사
+existing_links = set()
 if os.path.exists(json_file):
     with open(json_file, "r", encoding="utf-8") as f:
         try:
             data = json.load(f)
             for article in data:
-                key = (article["URL"], article.get("발행시간", ""))
-                existing_keys.add(key)
+                existing_links.add(article["URL"])
         except json.JSONDecodeError:
             data = []
+else:
+    data = []
 
+
+selected_category = "IT/과학" 
+count_str = "5"
+sid = "105"
+count = int(count_str)
+
+
+# 링크 수집
 url = base_url + sid
 res = requests.get(url, headers=headers)
 soup = BeautifulSoup(res.text, "html.parser")
-articles = soup.select("div.sa_text")
 
-print(f"[{selected_category}] 선택 기사 수: {count}")
+articles = soup.select("div.sa_text")
+print(f"[{selected_category}] 선택 기사 수: {count_str}")
+
+# 기사 처리
 new_articles = []
+
+
 
 for i in articles:
     if len(new_articles) >= count:
@@ -59,138 +80,175 @@ for i in articles:
 
     title = title_tag.get_text(strip=True)
     link = title_tag["href"]
-
-    article_res = requests.get(link, headers=headers)
-    article_soup = BeautifulSoup(article_res.text, "html.parser")
-
-    time_tag = article_soup.select_one("span.media_end_head_info_datestamp_time")
-    publish_time = (
-        time_tag["data-date-time"]
-        if time_tag and time_tag.has_attr("data-date-time")
-        else "Unknown"
-    )
-
-    key = (link, publish_time)
-    if key in existing_keys:
-        print(f"중복 기사 건너뜀: {title}")
+    if link in existing_links:
+        print(f"중복: {title}")
         continue
 
-    journalist_tag = article_soup.select_one("em.media_end_head_journalist_name")
-    journalist = journalist_tag.get_text(strip=True) if journalist_tag else "Unknown"
+    try:
+        article_res = requests.get(link, headers=headers)
+        article_soup = BeautifulSoup(article_res.text, "html.parser")
 
-    press_tag = article_soup.select_one("span.media_end_head_top_logo_text")
-    press = press_tag.get_text(strip=True) if press_tag else "Unknown"
+        # 작성시간
+        time_tag = article_soup.select_one("span.media_end_head_info_datestamp_time")
+        publish_time = (
+            time_tag["data-date-time"]
+            if time_tag and time_tag.has_attr("data-date-time")
+            else "Unknown"
+        )
 
-    content_area = article_soup.select_one("div#newsct_article")
-    if not content_area:
-        print(f"본문 없음")
-        continue
+        # 기자
+        journalist_tag = article_soup.select_one("em.media_end_head_journalist_name")
+        journalist = (
+            journalist_tag.get_text(strip=True) if journalist_tag else "Unknown"
+        )
 
-    paragraphs = content_area.find_all("p")
-    content_text = " ".join(
-        p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)
-    )
-    if not content_text:
-        content_text = content_area.get_text(strip=True)
+        # 언론사
+        press_tag = article_soup.select_one("span.media_end_head_top_logo_text")
+        press = press_tag.get_text(strip=True) if press_tag else "Unknown"
 
-    prompt = f"다음 뉴스 기사를 한국어로 핵심만 간단히 요약해:\n\n{content_text}"
-    response = client.chat.completions.create(
-        model=model_version,
-        messages=[
-            {
-                "role": "system",
-                "content": "뉴스 요약 시스템이다. 사용자가 입력한 기사를 핵심내용으로 요약해.",
-            },
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.5,
-    )
-    summary = response.choices[0].message.content.strip()
+        # 본문
+        content_area = article_soup.select_one("div#newsct_article")
+        if not content_area:
+            print(f"본문 없음")
+            continue
 
-    subcategories_str = "\n".join(subcategories)
-    prompt_classify = f"""다음 뉴스 기사 요약을 읽고, 반드시 아래 8개의 세부 카테고리 중 하나를 골라 **정확히 그 이름만 사용해** 출력하라.
-반드시 아래 목록 중 하나만 선택해야 하며, 다른 표현이나 유사어를 쓰지 마라.
+        paragraphs = content_area.find_all("p")
+        content_text = " ".join(
+            p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)
+        )
+        if not content_text:
+            content_text = content_area.get_text(strip=True)
 
-출력 형식 (이외 다른 문자 금지):
-카테고리: (선택된 카테고리 이름)
+        # GPT로 요약
+        prompt = f"다음 뉴스 기사를 한국어로 핵심만 간단히 요약해:\n\n{content_text}"
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "뉴스 요약 시스템이다. 사용자가 입력한 기사를 핵심내용으로 요약해.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.5,
+        )
+
+        summary = response.choices[0].message.content.strip()
+
+        prompt_classify = f"""다음 뉴스 기사 요약을 읽고, 아래 8개의 세부 카테고리 중 가장 적절한 것을 정확히 한 단어로만 출력해.
 
 카테고리 목록:
-{subcategories_str}
+{subcategories}
 
 뉴스 요약:
 {summary}
-"""
 
-    response_classify = client.chat.completions.create(
-        model=model_version,
-        messages=[
+출력 형식: 카테고리: (선택된 카테고리 이름)
+"""
+        response_classify = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "뉴스 기사 요약을 기반으로 세부 카테고리를 분류하는 시스템이다.",
+                },
+                {"role": "user", "content": prompt_classify},
+            ],
+            temperature=0,
+        )
+        classify_result = response_classify.choices[0].message.content.strip()
+        subcategory = (
+            classify_result.split(":")[-1].strip()
+            if ":" in classify_result
+            else "Unknown"
+        )
+
+        # 자극성, 연관성 평가
+        prompt_eval = f"뉴스 제목: {title}\n\n뉴스 본문: {content_text}\n\n1. 이 제목의 자극성을 10점 만점으로 평가해 다른 문자 없이 '자극성 :(점수)'로만 표현해줘. (점수가 높을수록 자극적. 보통의 자극도일 경우 5점으로 해줘)2. 이 제목이 뉴스 본문과 얼마나 연관 있는지 100점 만점으로 평가해 다른 문자 없이 '연관성 :(점수)'로만 표현해. 1번 2번 답은 줄을 바꿔서 출력해줘"
+        response_eval = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "넌 뉴스 제목을 분석,평가하는 시스템이다.",
+                },
+                {"role": "user", "content": prompt_eval},
+            ],
+            temperature=0.3,
+        )
+        eval_text = response_eval.choices[0].message.content.strip()
+
+        headline_score = ""
+        relevance_score = ""
+        for line in eval_text.split("\n"):
+            if "자극성" in line:
+                headline_score = line.split(":")[-1].strip()
+            elif "연관성" in line:
+                relevance_score = line.split(":")[-1].strip()
+
+        new_articles.append(
             {
-                "role": "system",
-                "content": "뉴스 기사 요약을 기반으로 세부 카테고리를 분류하는 시스템이다.",
-            },
-            {"role": "user", "content": prompt_classify},
-        ],
-        temperature=0,
-    )
-    classify_result = response_classify.choices[0].message.content.strip()
-    subcategory = (
-        classify_result.split(":")[-1].strip() if ":" in classify_result else "Unknown"
-    )
+                "언론사": press,
+                "세부카테고리": subcategory,
+                "제목": title,
+                "URL": link,
+                "발행시간": publish_time,
+                "기자": journalist,
+                "요약": summary,
+                "자극성(10점)": headline_score,
+                "연관성(100점)": relevance_score,
+            }
+        )
 
-    prompt_eval = f"""뉴스 제목: {title}
+        print(f"수집 및 요약 완료: {title}")
 
-뉴스 본문:
-{content_text}
+    except Exception as e:
+        print(f"에러 발생: {e}")
+        continue
 
-다음 뉴스 제목과 본문을 바탕으로 두 가지 항목을 평가하라.
+# 저장하기
+conn = mysql.connect(
+    host="youthdb.cjuwyyqya00c.ap-southeast-2.rds.amazonaws.com",
+    port="3306",
+    user="admin",
+    password="adminadmin",
+    database="youthdb"
+)
+cursor = conn.cursor()
 
-1. 제목의 자극성을 10점 만점으로 평가하되, 점수가 높을수록 자극적이며, 보통 수준일 경우 5점으로 평가하라.
-2. 제목이 본문과 얼마나 관련 있는지를 100점 만점으로 평가하라.
+for article in new_articles: 
+    try:
 
-출력 형식은 반드시 다음과 같이 정확히 두 줄로 작성하라.  
-점수 외에는 설명, 기호, 문장 등을 포함하지 말고 아래 양식을 그대로 따를 것:
+        press = article["언론사"]
+        subcategory = article["세부카테고리"]
+        title = article["제목"]
+        link = article["URL"]
+        publish_time = article["발행시간"]
+        journalist = article["기자"]
+        summary = article["요약"]
+        headline_score = int(article["자극성(10점)"])
+        relevance_score = int(article["연관성(100점)"])
 
-자극성: (숫자)
-연관성: (숫자)
-"""
+        sql = """
+        INSERT INTO newsdata (
+            press, subcategory, title, link, publish_time,
+            journalist, summary, headline_score, relevance_score
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """
+        values = (
+            press, subcategory, title, link, publish_time,
+            journalist, summary, headline_score, relevance_score
+        )
+        cursor.execute(sql, values)
 
-    response_eval = client.chat.completions.create(
-        model=model_version,
-        messages=[
-            {"role": "system", "content": "넌 뉴스 제목을 분석,평가하는 시스템이다."},
-            {"role": "user", "content": prompt_eval},
-        ],
-        temperature=0,
-    )
-    eval_text = response_eval.choices[0].message.content.strip()
+        print(f"DB 저장 완료: {title}")
 
-    headline_score = ""
-    relevance_score = ""
-    for line in eval_text.split("\n"):
-        if "자극성" in line:
-            headline_score = line.split(":")[-1].strip()
-        elif "연관성" in line:
-            relevance_score = line.split(":")[-1].strip()
+    except Exception as e:
+        print(f"에러: {e}")
+        continue
 
-    new_articles.append(
-        {
-            "언론사": press,
-            "세부카테고리": subcategory,
-            "제목": title,
-            "URL": link,
-            "발행시간": publish_time,
-            "기자": journalist,
-            "요약": summary,
-            "자극성(10점)": headline_score,
-            "연관성(100점)": relevance_score,
-        }
-    )
+conn.commit()
+cursor.close()
+conn.close()
 
-    print(f"수집 및 요약 완료: {title}")
-
-# 저장
-data.extend(new_articles)
-with open(json_file, "w", encoding="utf-8") as f:
-    json.dump(data, f, ensure_ascii=False, indent=2)
-
-print(f"\n총 {len(new_articles)}개 기사 저장 완료 (파일: {json_file})")
+print(f"\n총 {len(new_articles)}개 기사 DB 저장 완료")
