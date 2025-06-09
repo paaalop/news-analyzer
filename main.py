@@ -41,7 +41,7 @@ else:
 
 
 selected_category = "IT/과학" 
-count_str = "5"
+count_str = "20"
 sid = "105"
 count = int(count_str)
 
@@ -131,7 +131,7 @@ for i in articles:
 카테고리: (선택된 카테고리 이름)
 
 카테고리 목록:
-{subcategories_str}
+{subcategories}
 
 뉴스 요약:
 {summary}
@@ -173,7 +173,7 @@ for i in articles:
 연관성: (숫자)
 """
 
-response_eval = client.chat.completions.create(
+        response_eval = client.chat.completions.create(
             model=model_version,
             messages=[
                 {

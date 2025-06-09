@@ -1,105 +1,147 @@
-import json
-from datetime import datetime, timedelta
-from openai import OpenAI
 import os
 import pymysql
+import numpy as np
 from dotenv import load_dotenv
-from math import ceil
+from datetime import datetime, timedelta
+from openai import OpenAI
+from numpy import dot
+from numpy.linalg import norm
 
+# 환경 설정
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 model_version = "gpt-4.1-mini"
+embedding_model = "text-embedding-3-small"
 
-# 어제 날짜
+# 날짜
 today = datetime.now()
 yesterday = today - timedelta(days=1)
 yesterday_str = yesterday.strftime("%Y-%m-%d")
 
-# DB
+# DB 연결
 conn = pymysql.connect(
-    host="youthdb.cjuwyyqya00c.ap-southeast-2.rds.amazonaws.com",
-    port=3306,
-    user="admin",
-    password="adminadmin",
-    database="youthdb"
+    host=os.getenv("DB_HOST"),
+    port=int(os.getenv("DB_PORT")),
+    user=os.getenv("DB_USER"),
+    password=os.getenv("DB_PASSWORD"),
+    database=os.getenv("DB_NAME")
 )
 cursor = conn.cursor()
 
-#기사 제목들 불러오기
-sql = """
-SELECT summary FROM newsdata
-WHERE publish_time LIKE %s
-"""
-cursor.execute(sql, (f"{yesterday_str}%",))
+# summary 불러오기
+cursor.execute("SELECT summary FROM newsdata WHERE publish_time LIKE %s", (f"{yesterday_str}%",))
 rows = cursor.fetchall()
 
 if not rows:
-    print("어제 날짜 기사 제목이 없습니다.")
-    cursor.close()
-    conn.close()
+    print("기사 없음.")
     exit()
 
-#요약 프롬프트 생성
-summaries = [f"{i+1}. {summary}" for i, (summary,) in enumerate(rows)]
+summaries = [row[0] for row in rows]
 
-# --- 100개씩 나눠 요약 (map 단계) ---
-CHUNK_SIZE = 100
-num_chunks = ceil(len(summaries) / CHUNK_SIZE)
-intermediate_summaries = []
+# 임베딩/유사도
+def get_embedding(text):
+    try:
+        res = client.embeddings.create(model=embedding_model, input=text)
+        return np.array(res.data[0].embedding)
+    except Exception as e:
+        print(f"[임베딩 오류] {e}")
+        return None
 
-for i in range(num_chunks):
-    chunk = summaries[i * CHUNK_SIZE:(i + 1) * CHUNK_SIZE]
-    chunk_prompt = (
-        "다음은 하루 동안의 기술 뉴스 기사 요약들이다. "
-        "가장 많이 언급된 주제 순서대로 정리해줘. 각 항목 앞에 숫자를 붙여줘:\n\n"
-        + "\n\n".join(chunk)
-    )
+def cosine_sim(v1, v2):
+    return dot(v1, v2) / (norm(v1) * norm(v2))
 
-    print(f"[{i+1}/{num_chunks}] 청크 요약 중...")
+# 군집화
+clusters = []
+for i, summary in enumerate(summaries):
+    print(f"[{i+1}/{len(summaries)}] 군집화 중...")
+    emb = get_embedding(summary)
+    if emb is None:
+        continue
 
-    chunk_response = client.chat.completions.create(
-        model=model_version,
-        messages=[
-            {"role": "system", "content": "너는 훌륭한 IT 뉴스 요약가야."},
-            {"role": "user", "content": chunk_prompt}
-        ],
-        temperature=0.5
-    )
+    matched = False
+    for cluster in clusters:
+        sim = cosine_sim(emb, cluster["embedding"])
+        if sim >= 0.85:
+            # GPT 확인
+            prompt = f"""다음 두 뉴스 요약이 같은 주제를 다루는 경우 1, 다르면 0을 출력하라. 그 외 설명은 쓰지 마라.
 
-    intermediate_summaries.append(chunk_response.choices[0].message.content)
+요약1:
+{cluster['summary']}
 
-# --- 최종 요약 (reduce 단계) ---
-final_prompt = (
-    "다음은 하루 동안의 기술 뉴스 요약 덩어리들이다. "
-    "중복되는 주제를 묶고, 가장 많이 언급된 순서대로 요약해줘. 각 항목 앞에 숫자를 붙여줘:\n\n"
-    + "\n\n".join(intermediate_summaries)
-)
+요약2:
+{summary}
+"""
+            try:
+                res = client.chat.completions.create(
+                    model=model_version,
+                    messages=[
+                        {"role": "system", "content": "같은 주제면 1, 다르면 0만 출력하는 시스템이다."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0
+                )
+                result = res.choices[0].message.content.strip()
+                if result == "1":
+                    cluster["count"] += 1
+                    cluster["extras"].append(summary)
+                    matched = True
+                    break
+            except Exception as e:
+                print(f"[GPT 오류] {e}")
+                continue
 
-print("최종 요약 생성 중...")
+    if not matched:
+        clusters.append({"summary": summary, "embedding": emb, "count": 1, "extras": []})
 
-final_response = client.chat.completions.create(
+# 대표 요약문 리스트 생성
+clusters.sort(key=lambda x: x["count"], reverse=True)
+cluster_texts = [
+    f"({c['count']}회 언급) {c['summary']}"
+    for c in clusters
+]
+
+# 2차 GPT 요약 프롬프트
+report_prompt = f"""다음은 하루 동안의 기술 뉴스 대표 요약문 리스트다.
+각 문장은 비슷한 뉴스들을 하나로 묶은 것이다.
+이 목록을 5~7개의 상위 주제 범주로 묶고,
+각 범주에 주제 제목을 붙인 뒤, 관련된 요약문을 2~3개씩 <ul><li> 형식으로 HTML로 출력하라.
+
+출력 예시:
+
+<h3>1. AI 반도체 (11건)</h3>
+<ul>
+  <li>삼성, AI 가속기 발표</li>
+  <li>인텔, 엣지 AI 칩 발표</li>
+</ul>
+
+마지막에 하루 전체 흐름 요약을 <p><strong>오늘 요약:</strong> ...</p> 형식으로 작성해라.
+
+{chr(10).join(cluster_texts)}
+"""
+
+res = client.chat.completions.create(
     model=model_version,
     messages=[
-        {"role": "system", "content": "너는 훌륭한 IT 뉴스 요약가야."},
-        {"role": "user", "content": final_prompt}
+        {"role": "system", "content": "넌 뉴스 리포트를 작성하는 시스템이다."},
+        {"role": "user", "content": report_prompt}
     ],
-    temperature=0.5
+    temperature=0.4
 )
 
-summary_text = response.choices[0].message.content.strip()
+final_summary = res.choices[0].message.content.strip()
 
-# summarydata에 저장
+# summarydata 저장
 try:
-    sql_insert = """
+    sql = """
     INSERT INTO summarydata (summary_date, summary)
     VALUES (%s, %s)
     ON DUPLICATE KEY UPDATE summary = VALUES(summary)
     """
-    cursor.execute(sql_insert, (yesterday_str, summary_text))
+    cursor.execute(sql, (yesterday_str, final_summary))
     conn.commit()
-    print("summarydata 저장 완료")
+    print("최종 요약 저장 완료")
 except Exception as e:
-    print(f"DB 저장 중 에러: {e}")
+    print(f"[DB 저장 에러] {e}")
 
 cursor.close()
 conn.close()
