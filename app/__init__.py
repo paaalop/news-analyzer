@@ -56,7 +56,7 @@ def create_app():
         for article in articles:
             relevance = article.get("relevance_score", 0)
             stimulus = article.get("headline_score", 0)
-            article["relevance_hue"] = 120 * ((relevance) / 20)
+            article["relevance_hue"] = 120 * ((relevance) / 100)
             article["stimulus_hue"] = 120 - (stimulus / 10) * 120
 
         return articles, total_articles
