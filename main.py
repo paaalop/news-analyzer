@@ -23,7 +23,7 @@ BASE_URL = "https://news.naver.com/section/"
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 SID = "105"  # IT/과학
 CATEGORY = "IT/과학"
-ARTICLE_LIMIT = 5
+ARTICLE_LIMIT = 20
 
 # DB 중복 링크 불러오기
 def load_existing_links_from_db():
