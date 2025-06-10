@@ -1,13 +1,17 @@
 import os
 import requests
 import pymysql
+import numpy as np
 from bs4 import BeautifulSoup
 from openai import OpenAI
 from dotenv import load_dotenv
+from numpy import dot
+from numpy.linalg import norm
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 model_version = "gpt-4.1-mini"
+embedding_model = "text-embedding-3-small"
 
 subcategories = [
     "모바일", "인터넷/SNS", "통신/뉴미디어", "IT일반",
@@ -102,17 +106,28 @@ def gpt_classify(summary):
     )
     return res.choices[0].message.content.strip().split(":")[-1].strip()
 
+# 임베딩
+def get_embedding(text):
+    try:
+        res = client.embeddings.create(model=embedding_model, input=text)
+        return np.array(res.data[0].embedding)
+    except Exception as e:
+        print(f"[임베딩 오류] {e}")
+        return None
+
+# 코사인 유사도 계산
+def cosine_sim(v1, v2):
+    return dot(v1, v2) / (norm(v1) * norm(v2))
+
 # GPT 자극성/연관성 평가
 def gpt_evaluate(title, content):
     prompt = f"""뉴스 제목: {title}
 뉴스 본문: {content}
 
 1. 제목의 자극성을 10점 만점으로 평가
-2. 제목과 본문의 연관성을 100점 만점으로 평가
 
 형식:
 자극성: (숫자)
-연관성: (숫자)
 """
     res = client.chat.completions.create(
         model=model_version,
@@ -122,8 +137,8 @@ def gpt_evaluate(title, content):
     )
     lines = res.choices[0].message.content.strip().split("\n")
     headline_score = int([l for l in lines if "자극성" in l][0].split(":")[1])
-    relevance_score = int([l for l in lines if "연관성" in l][0].split(":")[1])
-    return headline_score, relevance_score
+    relevance_score = cosine_sim(get_embedding(title), get_embedding(content)) * 100  # 0~1 범위를 0~10으로 변환
+    return headline_score, int(relevance_score)
 
 # DB 저장
 def insert_to_db(articles):

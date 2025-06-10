@@ -367,6 +367,17 @@
                 font-size: 1em;
                 padding: 15px;
             }
+            .nav-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            }  
+
+            .search-form-inline {
+            display: flex;
+            gap: 5px;
+            }
+
         }
     </style>
 </head>
@@ -380,6 +391,16 @@
         <a href="/?category={{ sub }}" class="{{ 'active' if selected_category == sub else '' }}">{{ sub }}</a>
         {% endfor %}
         <a href="/summary" class="{{ 'active' if selected_category == '어제 요약' else '' }}">어제 요약</a>
+          <form method="get" action="/" class="search-form-inline">
+    <input type="text" name="query" placeholder="검색어" value="{{ request.args.get('query', '') }}">
+    <select name="field">
+      <option value="title" {% if request.args.get('field') == 'title' %}selected{% endif %}>제목</option>
+      <option value="journalist" {% if request.args.get('field') == 'journalist' %}selected{% endif %}>기자</option>
+      <option value="summary" {% if request.args.get('field') == 'summary' %}selected{% endif %}>내용</option>
+      <option value="press" {% if request.args.get('field') == 'press' %}selected{% endif %}>언론사</option>
+    </select>
+    <button type="submit">검색</button>
+  </form>
     </nav>
     <div class="container">
         {% block content %}{% endblock %}
