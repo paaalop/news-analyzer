@@ -1,6 +1,9 @@
 import os
 import pymysql
+from dotenv import load_dotenv
 from flask import Flask, render_template, request
+
+load_dotenv()
 
 SUBCATEGORIES = [
     "전체", "모바일", "인터넷/SNS", "통신/뉴미디어", "IT일반",
