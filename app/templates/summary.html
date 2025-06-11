@@ -21,7 +21,7 @@
     {% if selected_summary %}
         <div class="summary-list-item">
             <h3>{{ selected_summary.summary_date }}</h3>
-            <pre>{{ selected_summary.summary }}</pre>
+            <div>{{ selected_summary.summary | safe }}</div>
         </div>
     {% else %}
         <p>해당 일자 요약이 없습니다.</p>

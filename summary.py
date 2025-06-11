@@ -95,29 +95,36 @@ for i, summary in enumerate(summaries):
 
 # 대표 요약문 리스트 생성
 clusters.sort(key=lambda x: x["count"], reverse=True)
-cluster_texts = [
-    f"({c['count']}회 언급) {c['summary']}"
-    for c in clusters
-]
+# 클러스터에서 전체 요약문 문자열 생성
+cluster_texts = []
+for c in clusters:
+    all_summaries = [c["summary"]] + c["extras"]
+    lines = '\n'.join(f"- {s}" for s in all_summaries)
+    cluster_texts.append(f"({c['count']}건)\n{lines}")
+
 
 # 2차 GPT 요약 프롬프트
-report_prompt = f"""다음은 하루 동안의 기술 뉴스 대표 요약문 리스트다.
-각 문장은 비슷한 뉴스들을 하나로 묶은 것이다.
-이 목록을 5~7개의 상위 주제 범주로 묶고,
-각 범주에 주제 제목을 붙인 뒤, 관련된 요약문을 2~3개씩 <ul><li> 형식으로 HTML로 출력하라.
+report_prompt = f"""다음은 하루 동안 수집된 총 {sum(c['count'] for c in clusters)}건의 기술 뉴스 요약문을 주제별로 분류한 것이다.
+
+이 목록을 유사한 주제끼리 묶어 5~7개의 상위 주제로 그룹화하고,
+각 그룹마다 제목을 붙인 후, 관련 요약문들을 전부 <ul><li> 형식으로 HTML로 출력하라.
+
+**요약문은 절대로 생략하지 말고 전부 출력하라.**
 
 출력 예시:
 
-<h3>1. AI 반도체 (11건)</h3>
+<h3>1. AI 반도체 (17건)</h3>
 <ul>
   <li>삼성, AI 가속기 발표</li>
   <li>인텔, 엣지 AI 칩 발표</li>
+  ...
 </ul>
 
-마지막에 하루 전체 흐름 요약을 <p><strong>오늘 요약:</strong> ...</p> 형식으로 작성해라.
+마지막에 하루 전체 흐름을 <p><strong>오늘 요약:</strong> ...</p> 형식으로 정리하라.
 
 {chr(10).join(cluster_texts)}
 """
+
 
 res = client.chat.completions.create(
     model=model_version,
