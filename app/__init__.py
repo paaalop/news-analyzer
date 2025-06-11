@@ -23,6 +23,7 @@ def create_app():
             database=os.getenv("DB_NAME")
         )
 
+
     def get_articles_from_db(category, page, per_page=10, query=None, field=None):
         conn = get_db_connection()
         cur = conn.cursor(pymysql.cursors.DictCursor)
@@ -69,6 +70,20 @@ def create_app():
         cur.close()
         conn.close()
         return article
+    
+    def get_summary_from_db(): #데이터베이스에서 요약 가져옷ㅣ 추가했습니다
+        conn = get_db_connection()
+        cur = conn.cursor(pymysql.cursors.DictCursor)
+        cur.execute("""
+            SELECT summary_date, summary
+            FROM summarydata
+            ORDER BY summary_date DESC
+        """)
+        summary_data = cur.fetchall()
+        cur.close()
+        conn.close()
+        return summary_data
+
 
     @app.route("/")
     def index():
@@ -96,5 +111,31 @@ def create_app():
                                    subcategories=SUBCATEGORIES,
                                    selected_category="기사 보기")
         return "기사를 찾을 수 없습니다.", 404
+    
+    @app.route("/summary")
+    def summary():
+        date = request.args.get("date")
+        summary_data = get_summary_from_db()
+        selected_summary = None
+        if date:
+            for item in summary_data:
+                if item["summary_date"] == date:
+                    selected_summary = item
+                    break
+        else:
+            # 기본적으로 가장 최신일자를 띄우도록 해놨음니다
+            if summary_data:
+                selected_summary = summary_data[0]
+                date = selected_summary["summary_date"]
+
+        return render_template("summary.html",
+                            summary_data=summary_data,
+                            selected_summary=selected_summary,
+                            selected_date=date,                      
+                            subcategories=SUBCATEGORIES,
+                            selected_category="어제 요약"
+                            )
+
+
 
     return app
