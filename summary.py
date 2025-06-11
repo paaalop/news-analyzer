@@ -10,9 +10,12 @@ from numpy.linalg import norm
 
 # --- 로깅 설정 ---
 logging.basicConfig(
-    filename="news_summary.log",
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s"
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler("news_summary.log"),
+        logging.StreamHandler()
+    ]
 )
 
 # --- 환경 설정 ---
@@ -66,6 +69,8 @@ def cosine_sim(v1, v2):
 
 # --- 군집화 ---
 clusters = []
+emb_matrix = []  # 전체 클러스터 임베딩 벡터 모음
+
 for i, summary in enumerate(summaries):
     logging.info(f"[{i+1}/{len(summaries)}] 군집화 중")
     emb = get_embedding(summary)
@@ -73,64 +78,53 @@ for i, summary in enumerate(summaries):
         logging.warning(f"[{i+1}] 임베딩 실패 → 건너뜀")
         continue
 
-    matched = False
-    for cluster in clusters:
-        sim = cosine_sim(emb, cluster["embedding"])
-        logging.info(f" - 유사도: {sim:.3f}")
-        if sim >= 0.85:
-            # GPT 검증
-            prompt = f"""다음 두 뉴스 요약이 같은 주제를 다루는 경우 1, 다르면 0을 출력하라.
-
-요약1:
-{cluster['summary']}
-
-요약2:
-{summary}
-"""
-            try:
-                res = client.chat.completions.create(
-                    model=model_version,
-                    messages=[
-                        {"role": "system", "content": "같은 주제면 1, 다르면 0만 출력하는 시스템이다."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    temperature=0
-                )
-                result = res.choices[0].message.content.strip()
-                logging.info(f" - GPT 판단: {result}")
-                if result == "1":
-                    cluster["count"] += 1
-                    cluster["extras"].append(summary)
-                    matched = True
-                    break
-            except Exception as e:
-                logging.error(f"[GPT 판단 오류] {e}")
-                continue
-
-    if not matched:
+    if not clusters:
         clusters.append({"summary": summary, "embedding": emb, "count": 1, "extras": []})
+        emb_matrix.append(emb)
+        continue
+
+    emb_matrix_np = np.array(emb_matrix)
+    norms = np.linalg.norm(emb_matrix_np, axis=1)
+    target_norm = norm(emb)
+    sims = np.dot(emb_matrix_np, emb) / (norms * target_norm)
+
+    best_index = np.argmax(sims)
+    best_sim = sims[best_index]
+    logging.info(f" - 최고 유사도: {best_sim:.3f}")
+
+    if best_sim >= 0.75:
+        clusters[best_index]["count"] += 1
+        clusters[best_index]["extras"].append(summary)
+    else:
+        clusters.append({"summary": summary, "embedding": emb, "count": 1, "extras": []})
+        emb_matrix.append(emb)
         logging.info(f" - 새 클러스터 생성 (총 {len(clusters)}개)")
 
 # --- 클러스터 정렬 ---
 clusters.sort(key=lambda x: x["count"], reverse=True)
 logging.info(f"총 {len(clusters)}개 클러스터 생성 완료")
 
-# --- 전체 요약 포함한 프롬프트 구성 ---
+# --- 대표 요약 2~3개만 사용한 입력 구성 ---
 cluster_texts = []
 for c in clusters:
     all_summaries = [c["summary"]] + c["extras"]
-    lines = '\n'.join(f"- {s}" for s in all_summaries)
+    top_examples = all_summaries[:3]
+    lines = '\n'.join(f"- {s}" for s in top_examples)
     cluster_texts.append(f"({c['count']}건)\n{lines}")
 
-report_prompt = f"""다음은 하루 동안 수집된 총 {sum(c['count'] for c in clusters)}건의 기술 뉴스 요약문이다.
+report_prompt = f"""
+다음은 하루 동안 수집된 총 {sum(c['count'] for c in clusters)}건의 기술 뉴스 기사 요약이다.
 
-이 목록을 유사한 주제끼리 묶어 5~7개의 상위 주제로 분류하고,
-각 주제마다 제목을 붙인 후, 관련된 모든 요약문을 빠짐없이 <ul><li> 형식으로 HTML로 출력하라.
+각 클러스터는 동일한 주제를 다루는 기사 묶음이다.
 
-각 주제별로 제목 옆 괄호 안에 총 뉴스 건수를 표기하라.
-요약문은 절대로 생략하지 말고 전부 출력하라.
+요구사항:
+1. 이 클러스터들을 5~7개의 상위 주제로 묶고, 각 주제에 제목을 붙여라.
+2. 각 주제 옆에는 해당 클러스터들의 총 기사 수를 괄호에 표시하라.
+3. 각 주제는 <h3> 태그로 제목을 명확하게 구분하고, 아래에는 대표 요약문 2~3개를 <ul><li>로 출력하라.
+4. 전체 기사 요약은 생략하고, 대표 요약만 출력해도 된다.
+5. 마지막에 하루 전체 요약을 <p><strong>오늘 요약:</strong> ...</p> 형식으로 작성하라.
 
-마지막에 하루 전체 흐름 요약을 <p><strong>오늘 요약:</strong> ...</p> 형식으로 작성하라.
+입력:
 
 {chr(10).join(cluster_texts)}
 """
