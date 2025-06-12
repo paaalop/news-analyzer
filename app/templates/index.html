@@ -29,24 +29,13 @@
 <!-- 페이지네이션 -->
 {% if total_pages > 1 %}
 <div class="pagination">
-    {% set start_page = max(1, current_page - 5) %}
-    {% set end_page = min(total_pages, current_page + 4) %}
-
-    {% if current_page > 1 %}
-        <a class="page-btn" href="/?category={{ selected_category }}&page=1&query={{ query }}&field={{ field }}">« 처음</a>
+    {% for p in range(1, total_pages + 1) %}
+    {% if p == current_page %}
+    <strong>[{{ p }}]</strong>
+    {% else %}
+    <a href="/?category={{ selected_category }}&page={{ p }}">[{{ p }}]</a>
     {% endif %}
-
-    {% for p in range(start_page, end_page + 1) %}
-        {% if p == current_page %}
-            <span class="page-btn current-page">{{ p }}</span>
-        {% else %}
-            <a class="page-btn" href="/?category={{ selected_category }}&page={{ p }}&query={{ query }}&field={{ field }}">{{ p }}</a>
-        {% endif %}
     {% endfor %}
-
-    {% if current_page < total_pages %}
-        <a class="page-btn" href="/?category={{ selected_category }}&page={{ total_pages }}&query={{ query }}&field={{ field }}">» 끝</a>
-    {% endif %}
 </div>
 {% endif %}
 
