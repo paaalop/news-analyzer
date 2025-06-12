@@ -272,35 +272,39 @@
         .pagination {
             display: flex;
             justify-content: center;
+            align-items: center;
             flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 20px;
+            gap: 5px;
+            margin-top: 30px;
+            font-size: 1em;
         }
         
-        .page-btn {
+        .pagination a,
+        .pagination span {
             display: inline-block;
-            padding: 6px 12px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
+            padding: 5px 10px;
+            border-radius: 4px;
             text-decoration: none;
             color: #333;
-            font-size: 14px;
-            background-color: #f9f9f9;
-            transition: background-color 0.2s, color 0.2s;
-        }
-        
-        .page-btn:hover {
-            background-color: #007bff;
-            color: white;
-            border-color: #007bff;
-        }
-        
-        .current-page {
             font-weight: bold;
-            background-color: #007bff;
-            color: white;
-            pointer-events: none;
+            border: 1px solid transparent;
         }
+        
+        .pagination a:hover {
+            background-color: #ff9800;
+            color: white;
+        }
+        
+        .pagination .current-page {
+            color: red;
+            text-decoration: underline;
+        }
+        
+        .pagination .disabled {
+            color: #ccc;
+            cursor: default;
+        }
+
 
 
         /* 반응형 디자인 */

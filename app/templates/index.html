@@ -25,58 +25,43 @@
     {% endif %}
     {% endfor %}
 </ul>
-"""
-<!-- 페이지네이션 
+
+<!-- 페이지네이션 -->
 {% if total_pages > 1 %}
 <div class="pagination">
-    {% for p in range(1, total_pages + 1) %}
-    {% if p == current_page %}
-    <strong>[{{ p }}]</strong>
+    {% set block_size = 15 %}
+    {% set block_start = (current_page - 1) // block_size * block_size + 1 %}
+    {% set block_end = block_start + block_size - 1 %}
+    {% if block_end > total_pages %}
+        {% set block_end = total_pages %}
+    {% endif %}
+
+    <!-- 맨 앞으로 -->
+    {% if current_page > 1 %}
+        <a href="/?category={{ selected_category }}&page=1&query={{ query }}&field={{ field }}">««</a>
+        <a href="/?category={{ selected_category }}&page={{ current_page - 1 }}&query={{ query }}&field={{ field }}">«</a>
     {% else %}
-    <a href="/?category={{ selected_category }}&page={{ p }}&query={{ query }}&field={{ field }}">[{{ p }}]</a>
-    {% endif %}
-    {% endfor %}
-</div>
-{% endif %}-->
-
-{% if total_pages > 1 %}
-<div class="pagination">
-
-    {% set visible_pages = 10 %}
-    {% set half_window = visible_pages // 2 %}
-
-    {% set start_page = current_page - half_window %}
-    {% if start_page < 1 %}
-        {% set start_page = 1 %}
+        <span class="disabled">««</span>
+        <span class="disabled">«</span>
     {% endif %}
 
-    {% set end_page = start_page + visible_pages - 1 %}
-    {% if end_page > total_pages %}
-        {% set end_page = total_pages %}
-        {% set start_page = end_page - visible_pages + 1 %}
-        {% if start_page < 1 %}
-            {% set start_page = 1 %}
-        {% endif %}
-    {% endif %}
-
-    {% if start_page > 1 %}
-        <a href="/?category={{ selected_category }}&page=1&query={{ query }}&field={{ field }}">« 1</a>
-        ...
-    {% endif %}
-
-    {% for p in range(start_page, end_page + 1) %}
+    <!-- 페이지 블록 -->
+    {% for p in range(block_start, block_end + 1) %}
         {% if p == current_page %}
-            <strong class="current-page">[{{ p }}]</strong>
+            <span class="current-page">{{ p }}</span>
         {% else %}
-            <a href="/?category={{ selected_category }}&page={{ p }}&query={{ query }}&field={{ field }}">[{{ p }}]</a>
+            <a href="/?category={{ selected_category }}&page={{ p }}&query={{ query }}&field={{ field }}">{{ p }}</a>
         {% endif %}
     {% endfor %}
 
-    {% if end_page < total_pages %}
-        ...
-        <a href="/?category={{ selected_category }}&page={{ total_pages }}&query={{ query }}&field={{ field }}">» {{ total_pages }}</a>
+    <!-- 다음 블록 / 끝으로 -->
+    {% if current_page < total_pages %}
+        <a href="/?category={{ selected_category }}&page={{ current_page + 1 }}&query={{ query }}&field={{ field }}">»</a>
+        <a href="/?category={{ selected_category }}&page={{ total_pages }}&query={{ query }}&field={{ field }}">»»</a>
+    {% else %}
+        <span class="disabled">»</span>
+        <span class="disabled">»»</span>
     {% endif %}
-
 </div>
 {% endif %}
 
