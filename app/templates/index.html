@@ -41,24 +41,42 @@
 
 {% if total_pages > 1 %}
 <div class="pagination">
-    {% set start_page = max(1, current_page - 5) %}
-    {% set end_page = min(total_pages, current_page + 4) %}
 
-    {% if current_page > 1 %}
-    <a class="page-btn" href="/?category={{ selected_category }}&page=1&query={{ query }}&field={{ field }}">« 처음</a>
+    {% set visible_pages = 10 %}
+    {% set half_window = visible_pages // 2 %}
+
+    {% set start_page = current_page - half_window %}
+    {% if start_page < 1 %}
+        {% set start_page = 1 %}
+    {% endif %}
+
+    {% set end_page = start_page + visible_pages - 1 %}
+    {% if end_page > total_pages %}
+        {% set end_page = total_pages %}
+        {% set start_page = end_page - visible_pages + 1 %}
+        {% if start_page < 1 %}
+            {% set start_page = 1 %}
+        {% endif %}
+    {% endif %}
+
+    {% if start_page > 1 %}
+        <a href="/?category={{ selected_category }}&page=1&query={{ query }}&field={{ field }}">« 1</a>
+        ...
     {% endif %}
 
     {% for p in range(start_page, end_page + 1) %}
-    {% if p == current_page %}
-        <span class="page-btn current-page">{{ p }}</span>
-    {% else %}
-        <a class="page-btn" href="/?category={{ selected_category }}&page={{ p }}&query={{ query }}&field={{ field }}">{{ p }}</a>
-    {% endif %}
+        {% if p == current_page %}
+            <strong class="current-page">[{{ p }}]</strong>
+        {% else %}
+            <a href="/?category={{ selected_category }}&page={{ p }}&query={{ query }}&field={{ field }}">[{{ p }}]</a>
+        {% endif %}
     {% endfor %}
 
-    {% if current_page < total_pages %}
-        <a class="page-btn" href="/?category={{ selected_category }}&page={{ total_pages }}&query={{ query }}&field={{ field }}">» 끝</a>
+    {% if end_page < total_pages %}
+        ...
+        <a href="/?category={{ selected_category }}&page={{ total_pages }}&query={{ query }}&field={{ field }}">» {{ total_pages }}</a>
     {% endif %}
+
 </div>
 {% endif %}
 
