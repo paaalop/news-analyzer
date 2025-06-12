@@ -40,6 +40,30 @@
 </div>
 {% endif %}
 
+{% if total_pages > 1 %}
+<div class="pagination">
+    {% set start_page = max(1, current_page - 5) %}
+    {% set end_page = min(total_pages, current_page + 4) %}
+
+    {% if current_page > 1 %}
+        <a class="page-btn" href="/?category={{ selected_category }}&page=1&query={{ query }}&field={{ field }}">« 처음</a>
+    {% endif %}
+
+    {% for p in range(start_page, end_page + 1) %}
+        {% if p == current_page %}
+            <span class="page-btn current-page">{{ p }}</span>
+        {% else %}
+            <a class="page-btn" href="/?category={{ selected_category }}&page={{ p }}&query={{ query }}&field={{ field }}">{{ p }}</a>
+        {% endif %}
+    {% endfor %}
+
+    {% if current_page < total_pages %}
+        <a class="page-btn" href="/?category={{ selected_category }}&page={{ total_pages }}&query={{ query }}&field={{ field }}">» 끝</a>
+    {% endif %}
+</div>
+{% endif %}
+
+
 {% else %}
 <p>해당 카테고리의 기사가 없습니다.</p>
 {% endif %}
