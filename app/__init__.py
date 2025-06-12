@@ -100,7 +100,9 @@ def create_app():
                                selected_category=category,
                                selected_articles=enumerate(articles),
                                current_page=page,
-                               total_pages=total_pages)
+                               total_pages=total_pages,
+                               query=query,#query랑 field를 만들어 놓고 반환을 안했기 때문에 index.html에서 주소필드에 적용하지 못함
+                               field=field)
 
     @app.route("/article/<int:article_id>")
     def show_article(article_id):
@@ -119,7 +121,7 @@ def create_app():
         selected_summary = None
         if date:
             for item in summary_data:
-                if item["summary_date"] == date:
+                if str(item["summary_date"]) == date:#flask 이슈;;
                     selected_summary = item
                     break
         else:
