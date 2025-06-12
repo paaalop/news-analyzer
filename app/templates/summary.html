@@ -5,18 +5,14 @@
 <div class="summary-content">
     <h2>어제 요약</h2>
 
-    <!-- 날짜 선택 폼 -->
+    <!-- 날짜 선택 폼 캘린더로-->
     <form method="get" action="/summary" style="margin-bottom: 20px;">
-        <label for="date-select"><strong>날짜 선택:</strong></label>
-        <select name="date" id="date-select" onchange="this.form.submit()">
-            {% for item in summary_data %}
-                <option value="{{ item.summary_date }}"
-                    {% if item.summary_date == selected_date %}selected{% endif %}>
-                    {{ item.summary_date }}
-                </option>
-            {% endfor %}
-        </select>
+        <label for="date-input"><strong>날짜 선택:</strong></label>
+        <input type="date" name="date" id="date-input" value="{{ selected_date }}">
+        <button type="submit">검색
+        </button>
     </form>
+
 
     {% if selected_summary %}
         <div class="summary-list-item">

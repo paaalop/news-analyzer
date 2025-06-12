@@ -270,10 +270,37 @@
         }
 
         .pagination {
-            text-align: center;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 6px;
             margin-top: 20px;
         }
 
+        .page-btn {
+            display: inline-block;
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #333;
+            font-size: 14px;
+            background-color: #f9f9f9;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        .page-btn:hover {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .current-page {
+            font-weight: bold;
+            background-color: #007bff;
+            color: white;
+            pointer-events: none;
+        }
 
         /* 반응형 디자인 */
         @media screen and (max-width: 768px) {
@@ -399,6 +426,7 @@
       <option value="summary" {% if request.args.get('field') == 'summary' %}selected{% endif %}>내용</option>
       <option value="press" {% if request.args.get('field') == 'press' %}selected{% endif %}>언론사</option>
     </select>
+    <input type="hidden" name="category" value="{{ selected_category }}"> <!-- 이걸로 대체 왜 되는지는 잘 모르겠지만 다른 방법 중에서 제일 간단하게 한줄로 해결 가능,,, -->
     <button type="submit">검색</button>
   </form>
     </nav>
