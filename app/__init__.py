@@ -101,7 +101,7 @@ def create_app():
                                selected_articles=enumerate(articles),
                                current_page=page,
                                total_pages=total_pages,
-                               query=query,#query랑 field를 만들어 놓고 반환을 안했기 때문에 index.html에서 주소필드에 적용하지 못함
+                               query=query,#query랑 field를 만들어 놓고 반환을 안했기 때문에 index.html에ㅐ서 주소필드에 적용하지 못함함
                                field=field)
 
     @app.route("/article/<int:article_id>")
