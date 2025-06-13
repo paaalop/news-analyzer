@@ -1,5 +1,6 @@
 import os
 import pymysql
+import datetime
 from dotenv import load_dotenv
 from flask import Flask, render_template, request
 
@@ -13,6 +14,15 @@ ARTICLES_PER_PAGE = 10
 
 def create_app():
     app = Flask(__name__)
+
+    press_logos = {}
+    with open("app\logo_data.txt", "r", encoding="utf-8") as f:
+        raw_data = f.read()
+
+    for line in raw_data.splitlines():
+        if " : " in line:
+            name, url = line.split(" : ", 1)
+            press_logos[name.strip()] = url.strip()
 
     def get_db_connection():
         return pymysql.connect(
@@ -57,7 +67,7 @@ def create_app():
         for article in articles:
             relevance = article.get("relevance_score", 0)
             stimulus = article.get("headline_score", 0)
-            article["relevance_hue"] = 120 * ((relevance) / 100)
+            article["relevance_hue"] = 120 * ((relevance) / 100) + 25
             article["stimulus_hue"] = 120 - (stimulus / 10) * 120
 
         return articles, total_articles
@@ -71,7 +81,7 @@ def create_app():
         conn.close()
         return article
     
-    def get_summary_from_db(): #데이터베이스에서 요약 가져옷ㅣ 추가했습니다
+    def get_summary_from_db(): #데이터베이스에서 요약 가져오기 추가했습니다
         conn = get_db_connection()
         cur = conn.cursor(pymysql.cursors.DictCursor)
         cur.execute("""
@@ -102,7 +112,8 @@ def create_app():
                                current_page=page,
                                total_pages=total_pages,
                                query=query,#query랑 field를 만들어 놓고 반환을 안했기 때문에 index.html에ㅐ서 주소필드에 적용하지 못함함
-                               field=field)
+                               field=field,
+                               press_logos=press_logos)
 
     @app.route("/article/<int:article_id>")
     def show_article(article_id):
@@ -138,6 +149,44 @@ def create_app():
                             selected_category="어제 요약"
                             )
 
+    @app.route("/home")
+    def home():
+        conn = get_db_connection()
+        cur = conn.cursor(pymysql.cursors.DictCursor)
+
+        home_articles = {}
+        today = datetime.datetime.now().date()
+
+        for cat in SUBCATEGORIES[1:9]:
+            cur.execute("""
+                SELECT * FROM newsdata 
+                WHERE subcategory = %s AND DATE(publish_time) = %s
+                ORDER BY relevance_score DESC LIMIT 1
+            """, (cat, today))
+            relevance_top = cur.fetchone()
+
+            cur.execute("""
+                SELECT * FROM newsdata 
+                WHERE subcategory = %s AND DATE(publish_time) = %s
+                ORDER BY headline_score DESC LIMIT 1
+            """, (cat, today))
+            stimulus_top = cur.fetchone()
+
+            articles = []
+            if relevance_top:
+                articles.append(relevance_top)
+            if stimulus_top and (not relevance_top or stimulus_top["id"] != relevance_top["id"]):
+                articles.append(stimulus_top)
+
+            home_articles[cat] = articles
+
+        cur.close()
+        conn.close()
+
+        return render_template("home.html",
+                            subcategories=SUBCATEGORIES,
+                            selected_category="홈",
+                            home_articles=home_articles)
 
 
     return app

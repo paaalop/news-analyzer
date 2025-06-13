@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>홈</h2>
+
+<div class="home-grid">
+    {% for category, articles in home_articles.items() %}
+    <div class="category-box">
+        <h3>{{ category }}</h3>
+        <ul>
+            {% if articles|length != 0 %}
+            {% for article in articles %}
+            <li>
+                <a href="/article/{{ article['id'] }}" class="article-title-link">
+                    {{ article['title'] }}
+                </a>
+                <small class="article-summary article-summary--ellipsis">
+                    {{ article['summary'] }}
+                </small>
+            </li>
+            {% endfor %}
+            {% else %}
+            <li>해당 카테고리에 오늘자 기사가 없습니다.</li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

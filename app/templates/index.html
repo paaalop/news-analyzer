@@ -8,17 +8,39 @@
 <ul>
     {% for idx, article in selected_articles %}
     <li class="article-list-item">
-        <div class="article-item">
-            <div class="relevance-dot" style="--relevance-hue: {{ article.relevance_hue }}">
-                {{ article['relevance_score'] }}
+        <!-- 본문 내용 -->
+        <div style="flex-grow: 1;">
+            <!-- 언론사 로고 -->
+            <div class="press-logo-container">
+                <img src="{{ press_logos[article.press] }}" alt="{{ article.press }}" class="press-logo-img">
+                <div style="margin-left: 10px; font-size: 12px; font-family: 'nanum-gothic';">
+                    {{ article.press }}
+                </div>
             </div>
-            <div class="stimulus-dot" style="--stimulus-hue: {{ article.stimulus_hue }}">
-                {{ article['headline_score'] }}
-            </div>
+            
+            <div style="display: flex; justify-content: flex-start; align-items: center;">
+                <!-- 기사 제목 -->
+                <a href="/article/{{ article['id'] }}" class="article-title-link">
+                    {{ article['title'] }}
+                </a>
 
-            <a href="/article/{{ article['id'] }}" class="article-title-link">{{ article['title'] }}</a>
+                <!-- 점수 표시 -->
+                <div class="article-item">
+                    <div class="relevance-dot" style="--relevance-hue: {{ article.relevance_hue }}">
+                        {{ article['relevance_score'] }}
+                    </div>
+                    <div class="stimulus-dot" style="--stimulus-hue: {{ article.stimulus_hue }}">
+                        {{ article['headline_score'] }}
+                    </div>
+                </div>
+            </div>
+            <!-- 요약문 -->
+            <small class="article-summary">
+                {{ article['summary'] }}
+            </small>
         </div>
-        <small class="article-summary">{{ article['summary'] }}</small>
+
+        
     </li>
     {% if not loop.last %}
     <hr class="article-divider">
@@ -29,38 +51,36 @@
 <!-- 페이지네이션 -->
 {% if total_pages > 1 %}
 <div class="pagination">
-    {% set block_size = 15 %}
-    {% set block_start = (current_page - 1) // block_size * block_size + 1 %}
-    {% set block_end = block_start + block_size - 1 %}
-    {% if block_end > total_pages %}
-        {% set block_end = total_pages %}
-    {% endif %}
+    {% set start_page = ((current_page - 1) // 10) * 10 + 1 %}
+    {% set end_page = [start_page + 9, total_pages]|min %}
 
-    <!-- 맨 앞으로 -->
+    {# 처음으로 버튼 #}
     {% if current_page > 1 %}
-        <a href="/?category={{ selected_category }}&page=1&query={{ query }}&field={{ field }}">««</a>
-        <a href="/?category={{ selected_category }}&page={{ current_page - 1 }}&query={{ query }}&field={{ field }}">«</a>
-    {% else %}
-        <span class="disabled">««</span>
-        <span class="disabled">«</span>
+    <a href="/?category={{ selected_category }}&page=1">처음</a>
     {% endif %}
 
-    <!-- 페이지 블록 -->
-    {% for p in range(block_start, block_end + 1) %}
+    {# 이전 블록 #}
+    {% if start_page > 1 %}
+    <a href="/?category={{ selected_category }}&page={{ start_page - 1 }}">«</a>
+    {% endif %}
+
+    {# 숫자 페이지 목록 #}
+    {% for p in range(start_page, end_page + 1) %}
         {% if p == current_page %}
-            <span class="current-page">{{ p }}</span>
+        <span class="current-page">{{ p }}</span>
         {% else %}
-            <a href="/?category={{ selected_category }}&page={{ p }}&query={{ query }}&field={{ field }}">{{ p }}</a>
+        <a href="/?category={{ selected_category }}&page={{ p }}">{{ p }}</a>
         {% endif %}
     {% endfor %}
 
-    <!-- 다음 블록 / 끝으로 -->
+    {# 다음 블록 #}
+    {% if end_page < total_pages %}
+    <a href="/?category={{ selected_category }}&page={{ end_page + 1 }}">»</a>
+    {% endif %}
+
+    {# 끝으로 버튼 #}
     {% if current_page < total_pages %}
-        <a href="/?category={{ selected_category }}&page={{ current_page + 1 }}&query={{ query }}&field={{ field }}">»</a>
-        <a href="/?category={{ selected_category }}&page={{ total_pages }}&query={{ query }}&field={{ field }}">»»</a>
-    {% else %}
-        <span class="disabled">»</span>
-        <span class="disabled">»»</span>
+    <a href="/?category={{ selected_category }}&page={{ total_pages }}">끝</a>
     {% endif %}
 </div>
 {% endif %}

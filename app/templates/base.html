@@ -25,8 +25,19 @@
             border-bottom: 1px solid #eee;
         }
 
+        header.site-header {
+            position: relative;
+            display: flex;
+            justify-content: center;    /* 로고를 중앙으로 */
+            align-items: center;
+            background-color: #ffffff;
+            padding: 20px 15px 20px;    /* 상-하 20, 좌-우 15 */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-bottom: 1px solid #eee;
+        }
+
         .site-logo {
-            font-family: 'Arial Black', sans-serif;
+            font-family: 'nanum-gothic';
             font-size: 3em;
             color: #222;
             margin: 0;
@@ -37,6 +48,14 @@
 
         .site-logo span {
             color: #ff5722;
+        }
+
+        .header-search {
+            position: absolute;
+            right: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         nav {
@@ -50,12 +69,12 @@
         }
 
         nav a {
-            color: white;
+            color: rgba(255, 255, 255, 0.75);
             text-decoration: none;
             padding: 10px 18px;
             border-radius: 5px;
             transition: background-color 0.3s ease;
-            font-weight: bold;
+            font-family: "nanum-gothic";
             font-size: 1.1em;
             white-space: nowrap;
         }
@@ -66,7 +85,9 @@
 
         /* 현재 선택된 카테고리 메뉴 강조 */
         nav a.active {
-            background-color: #ff9800;
+            background-color: #ff990000;
+            font-weight: bold;
+            color: white;
         }
 
         .container {
@@ -103,16 +124,17 @@
         /* 연관성/자극성 동그라미 공통 스타일 */
         .relevance-dot,
         .stimulus-dot {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            border-radius: 8px;
             display: flex;
             justify-content: center;
             align-items: center;
             color: white;
+            font-family: "nanum-gothic";
             font-weight: bold;
             font-size: 0.9em;
-            border: 2px solid rgba(255, 255, 255, 0.7);
+            background-color: rgba(0, 0, 0, 0);
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
             flex-shrink: 0;
         }
@@ -130,18 +152,23 @@
         }
 
         .article-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 5px;
+            display: flex; 
+            gap: 6px; 
+            margin-left: 12px;
+        }
+
+        .article-list-item {
+            display: flex; 
+            align-items: center; 
+            margin-bottom: 0px;
         }
 
         .article-title-link {
-            flex-grow: 1;
+            font-family: "nanum-gothic";
+            font-weight: bold;
             text-decoration: none;
             color: #222;
-            font-weight: bold;
-            font-size: 1.3em;
-            transition: color 0.2s ease;
+            font-size: 20px;
         }
 
         .article-title-link:hover {
@@ -149,16 +176,20 @@
         }
 
         .article-summary {
-            font-size: 1em;
+            font-size: 14px;
+            font-family: "nanum-gothic";
             color: #555;
-            margin-top: 5px;
-            padding-left: calc(32px + 8px + 32px + 12px);
-            display: block;
+            margin-top: 8px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         hr.article-divider {
             border: none;
-            border-top: 1px dashed #ddd;
+            border-top: 1px solid #f3f3f3;
             margin: 20px 0;
         }
 
@@ -248,6 +279,16 @@
             color: #333;
         }
 
+        .article-summary--ellipsis {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;       /* 줄 수 제한: 2줄 */
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.5;
+            max-height: 4.5em;             /* 1.5em * 2줄 = 3em */
+        }
+
         .back-link {
             display: inline-block;
             margin-top: 30px;
@@ -305,6 +346,43 @@
             cursor: default;
         }
 
+        .press-logo-container{
+            flex-shrink: 0; 
+            display: flex;
+            margin-bottom: 8px;
+            align-items: center; 
+            height: 100%;
+        }
+
+        .press-logo-img {
+            width: 25px;
+            height: 25px;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        .home-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .category-box {
+            background-color: #fffefc;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .category-box h3 {
+            margin-top: 0;
+            font-size: 1.4em;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
 
 
         /* 반응형 디자인 */
@@ -365,8 +443,7 @@
             }
 
             .article-summary {
-                font-size: 0.9em;
-                padding-left: calc(28px + 6px + 28px + 10px);
+                font-size: 0.0em;
             }
 
             .summary-list-item h3 {
@@ -415,26 +492,29 @@
 </head>
 
 <body>
-    <header>
+    <header class="site-header">
         <h1 class="site-logo">YOUTH <span>NEWS</span></h1>
+        <form method="get" action="/" class="header-search">
+            <input type="text" name="query" placeholder="검색어" value="{{ request.args.get('query','') }}">
+            <select name="field">
+                <option value="title"    {% if request.args.get('field')=='title'    %}selected{% endif %}>제목</option>
+                <option value="journalist"{% if request.args.get('field')=='journalist'%}selected{% endif %}>기자</option>
+                <option value="summary"  {% if request.args.get('field')=='summary'  %}selected{% endif %}>내용</option>
+                <option value="press"    {% if request.args.get('field')=='press'    %}selected{% endif %}>언론사</option>
+            </select>
+            <input type="hidden" name="category" value="{{ selected_category }}">
+            <button type="submit">검색</button>
+        </form>
     </header>
+
     <nav>
+        <a href="/home" class="{{ 'active' if selected_category == '홈' else '' }}">홈</a>
         {% for sub in subcategories %}
         <a href="/?category={{ sub }}" class="{{ 'active' if selected_category == sub else '' }}">{{ sub }}</a>
         {% endfor %}
         <a href="/summary" class="{{ 'active' if selected_category == '어제 요약' else '' }}">어제 요약</a>
-          <form method="get" action="/" class="search-form-inline">
-    <input type="text" name="query" placeholder="검색어" value="{{ request.args.get('query', '') }}">
-    <select name="field">
-      <option value="title" {% if request.args.get('field') == 'title' %}selected{% endif %}>제목</option>
-      <option value="journalist" {% if request.args.get('field') == 'journalist' %}selected{% endif %}>기자</option>
-      <option value="summary" {% if request.args.get('field') == 'summary' %}selected{% endif %}>내용</option>
-      <option value="press" {% if request.args.get('field') == 'press' %}selected{% endif %}>언론사</option>
-    </select>
-    <input type="hidden" name="category" value="{{ selected_category }}"> <!-- 이걸로 대체 왜 되는지는 잘 모르겠지만 다른 방법 중에서 제일 간단하게 한줄로 해결 가능,,, -->
-    <button type="submit">검색</button>
-  </form>
     </nav>
+
     <div class="container">
         {% block content %}{% endblock %}
     </div>
