@@ -1,8 +1,52 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h2>{{ selected_category }}</h2>
 
+<div class="category-header">
+    {%if query and query != "None" %}
+    <div>
+        <a style="color: rgb(168, 167, 167); font-weight: normal;">검색어 | </a>
+        {{ query }}
+    </div>
+
+    {% else %}
+    <a>{{ selected_category }}</a>
+    {% endif %}
+
+    <div class="tooltip-container">
+        <span class="tooltip-question">
+            숫자는 무엇을 의미하나요?
+        </span>
+        <span class="tooltip-bubble">
+            왼쪽의 숫자는 기사의 <strong>연관성</strong>을,<br> 
+            오른쪽의 숫자는 <strong>자극성</strong>를 나타냅니다.<br><br>
+            <strong>연관성</strong>은 기사의 제목과 본문이 얼마나 관련이 있는지를 <strong>100점 만점</strong>으로,<br>
+            <strong>자극성</strong>는 기사의 제목이 얼마나 자극적인지를 <strong>10점 만점</strong>으로 나타냅니다.
+        </span>
+    </div>
+</div>
+
+<!-- 툴팁 동작을 위한 JavaScript -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.tooltip-container').forEach(function (container) {
+            container.addEventListener('click', function (e) {
+                e.stopPropagation();
+                const bubble = this.querySelector('.tooltip-bubble');
+                if (bubble.style.display === 'none' || !bubble.style.display) {
+                    bubble.style.display = 'block';
+                } else {
+                    bubble.style.display = 'none';
+                }
+            });
+        });
+        document.addEventListener('click', function () {
+            document.querySelectorAll('.tooltip-bubble').forEach(function (bubble) {
+                bubble.style.display = 'none';
+            });
+        });
+    });
+</script>
 <!-- 기사 목록 -->
 {% if selected_articles %}
 <ul>
@@ -17,7 +61,7 @@
                     {{ article.press }}
                 </div>
             </div>
-            
+
             <div style="display: flex; justify-content: flex-start; align-items: center;">
                 <!-- 기사 제목 -->
                 <a href="/article/{{ article['id'] }}" class="article-title-link">
@@ -40,7 +84,7 @@
             </small>
         </div>
 
-        
+
     </li>
     {% if not loop.last %}
     <hr class="article-divider">
@@ -56,32 +100,32 @@
 
     {# 처음으로 버튼 #}
     {% if current_page > 1 %}
-    <a href="/?category={{ selected_category }}&page=1">처음</a>
+    <a href="/?category={{ selected_category }}&page=1&query={{ query }}&field={{ field }}">처음</a>
     {% endif %}
 
     {# 이전 블록 #}
     {% if start_page > 1 %}
-    <a href="/?category={{ selected_category }}&page={{ start_page - 1 }}">«</a>
+    <a href="/?category={{ selected_category }}&page={{ start_page - 1 }}&query={{ query }}&field={{ field }}">«</a>
     {% endif %}
 
     {# 숫자 페이지 목록 #}
     {% for p in range(start_page, end_page + 1) %}
-        {% if p == current_page %}
-        <span class="current-page">{{ p }}</span>
-        {% else %}
-        <a href="/?category={{ selected_category }}&page={{ p }}">{{ p }}</a>
-        {% endif %}
+    {% if p == current_page %}
+    <span class="current-page">{{ p }}</span>
+    {% else %}
+    <a href="/?category={{ selected_category }}&page={{ p }}&query={{ query }}&field={{ field }}">{{ p }}</a>
+    {% endif %}
     {% endfor %}
 
     {# 다음 블록 #}
-    {% if end_page < total_pages %}
-    <a href="/?category={{ selected_category }}&page={{ end_page + 1 }}">»</a>
-    {% endif %}
+    {% if end_page < total_pages %} <a
+        href="/?category={{ selected_category }}&page={{ end_page + 1 }}&query={{ query }}&field={{ field }}">»</a>
+        {% endif %}
 
-    {# 끝으로 버튼 #}
-    {% if current_page < total_pages %}
-    <a href="/?category={{ selected_category }}&page={{ total_pages }}">끝</a>
-    {% endif %}
+        {# 끝으로 버튼 #}
+        {% if current_page < total_pages %} <a
+            href="/?category={{ selected_category }}&page={{ total_pages }}&query={{ query }}&field={{ field }}">끝</a>
+            {% endif %}
 </div>
 {% endif %}
 

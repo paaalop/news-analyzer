@@ -25,20 +25,37 @@
             border-bottom: 1px solid #eee;
         }
 
-        header.site-header {
-            position: relative;
+        .site-header {
             display: flex;
-            justify-content: center;    /* 로고를 중앙으로 */
+            justify-content: center;
+            /* 로고를 중앙으로 */
             align-items: center;
             background-color: #ffffff;
-            padding: 20px 15px 20px;    /* 상-하 20, 좌-우 15 */
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            border-bottom: 1px solid #eee;
+            padding: 20px 15px 20px;
+            /* 상-하 20, 좌-우 15 */
+        }
+
+        .search-icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            position: absolute;
+            justify-content: center;
+            right: 15px;
+            top: 32px;
+        }
+
+        .search-icon-btn img {
+            width: 24px;
+            height: 24px;
+            filter: invert(0.5);
+            transition: filter 0.3s ease;
         }
 
         .site-logo {
             font-family: 'nanum-gothic';
-            font-size: 3em;
+            font-size: 48px;
+            font-weight: bold;
             color: #222;
             margin: 0;
             line-height: 1;
@@ -99,14 +116,19 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
         }
 
-        h2 {
+        .category-header {
+            display: flex;
+            justify-content:space-between;
             margin-top: 15px;
             margin-bottom: 25px;
             color: #333;
             font-size: 2em;
+            font-family: "nanum-gothic";
+            font-weight: bold;
             border-bottom: 2px solid #eee;
             padding-bottom: 10px;
         }
+
 
         ul {
             list-style: none;
@@ -152,14 +174,14 @@
         }
 
         .article-item {
-            display: flex; 
-            gap: 6px; 
+            display: flex;
+            gap: 6px;
             margin-left: 12px;
         }
 
         .article-list-item {
-            display: flex; 
-            align-items: center; 
+            display: flex;
+            align-items: center;
             margin-bottom: 0px;
         }
 
@@ -281,12 +303,14 @@
 
         .article-summary--ellipsis {
             display: -webkit-box;
-            -webkit-line-clamp: 3;       /* 줄 수 제한: 2줄 */
+            -webkit-line-clamp: 3;
+            /* 줄 수 제한: 2줄 */
             -webkit-box-orient: vertical;
             overflow: hidden;
             text-overflow: ellipsis;
             line-height: 1.5;
-            max-height: 4.5em;             /* 1.5em * 2줄 = 3em */
+            max-height: 4.5em;
+            /* 1.5em * 2줄 = 3em */
         }
 
         .back-link {
@@ -319,7 +343,7 @@
             margin-top: 30px;
             font-size: 1em;
         }
-        
+
         .pagination a,
         .pagination span {
             display: inline-block;
@@ -330,27 +354,27 @@
             font-weight: bold;
             border: 1px solid transparent;
         }
-        
+
         .pagination a:hover {
             background-color: #ff9800;
             color: white;
         }
-        
+
         .pagination .current-page {
             color: red;
             text-decoration: underline;
         }
-        
+
         .pagination .disabled {
             color: #ccc;
             cursor: default;
         }
 
-        .press-logo-container{
-            flex-shrink: 0; 
+        .press-logo-container {
+            flex-shrink: 0;
             display: flex;
             margin-bottom: 8px;
-            align-items: center; 
+            align-items: center;
             height: 100%;
         }
 
@@ -384,6 +408,147 @@
             margin-bottom: 15px;
         }
 
+        .search-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding-top: 88px;
+            /* 헤더 높이만큼 패딩 */
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            justify-content: center;
+            align-items: top;
+        }
+
+        .search-modal-content {
+            display: flex;
+            flex-direction: column;
+            background: rgb(236, 236, 236);
+            text-align: right;
+            padding: 0 30% 0 30%;
+            justify-content: center;
+            width: 100%;
+            height: 30%;
+            position: relative;
+        }
+
+        .search-title {
+            margin: 0 0 20px 0;
+            font-size: 28px;
+            font-weight: bold;
+            font-family: "nanum-gothic";
+            text-align: left;
+            color: #333;
+        }
+
+        .search-form {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            width: 100%;
+        }
+
+        .search-input {
+            flex-grow: 1;
+            padding: 0px 14px 0px 14px;
+            height: 56px;
+            font-size: 14px;
+            font-family: "nanum-gothic";
+            color: #000000;
+            border: 1px solid #ccc;
+            border-right: none;
+            border-radius: 5px 0 0 5px;
+            outline: none;
+        }
+
+        .search-button {
+            padding: 14.5px;
+            border: 1px solid #ccc;
+            border-radius: 0 5px 5px 0;
+            cursor: pointer;
+        }
+
+        .search-button img {
+            width: 24px;
+            height: 24px;
+            filter: invert(0.5);
+            transition: filter 0.3s ease;
+        }
+
+        .search-select {
+            margin-left: 10px;
+            font-size: 14px;
+            font-family: "nanum-gothic";
+            text-align: center;
+            padding: 0px;
+            width: 70px;
+            height: 58px;
+            color: #999;
+            opacity: 1;
+            background-color: #ffffff;
+            color: rgb(0, 0, 0);
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .search-select option {
+            font-family: "nanum-gothic";
+            color: #999;
+            opacity: 1;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .tooltip-question {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            cursor: pointer;
+            margin-left: 8px;
+            font-size: 15px;
+            transition: background 0.2s;
+        }
+
+        .tooltip-question:hover {
+            background: #ddd;
+        }
+
+        .tooltip-bubble {
+            display: none;
+            position: absolute;
+            right: 0%;
+            background: #fff;
+            color: #222;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            font-size: 14px;
+            font-family: "nanum-gothic";
+            font-weight: normal;
+            width: 300px;
+            z-index: 100;
+        }
+
 
         /* 반응형 디자인 */
         @media screen and (max-width: 768px) {
@@ -393,10 +558,6 @@
 
             header {
                 padding: 15px 10px;
-            }
-
-            .site-logo {
-                font-size: 2.2em;
             }
 
             nav {
@@ -476,15 +637,16 @@
                 font-size: 1em;
                 padding: 15px;
             }
+
             .nav-bar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            }  
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
 
             .search-form-inline {
-            display: flex;
-            gap: 5px;
+                display: flex;
+                gap: 5px;
             }
 
         }
@@ -492,20 +654,31 @@
 </head>
 
 <body>
-    <header class="site-header">
-        <h1 class="site-logo">YOUTH <span>NEWS</span></h1>
-        <form method="get" action="/" class="header-search">
-            <input type="text" name="query" placeholder="검색어" value="{{ request.args.get('query','') }}">
-            <select name="field">
-                <option value="title"    {% if request.args.get('field')=='title'    %}selected{% endif %}>제목</option>
-                <option value="journalist"{% if request.args.get('field')=='journalist'%}selected{% endif %}>기자</option>
-                <option value="summary"  {% if request.args.get('field')=='summary'  %}selected{% endif %}>내용</option>
-                <option value="press"    {% if request.args.get('field')=='press'    %}selected{% endif %}>언론사</option>
-            </select>
-            <input type="hidden" name="category" value="{{ selected_category }}">
-            <button type="submit">검색</button>
-        </form>
-    </header>
+    <div class="site-header">
+        <a class="site-logo">YOUTH <span>NEWS</span></a>
+        <button id="open-search-modal" class="search-icon-btn">
+            <img src="https://svgsilh.com/png-512/1093183.png" alt="검색"/>
+        </button>
+    </div>
+    <div id="search-modal" class="search-modal">
+        <div class="search-modal-content">
+            <p class="search-title">뉴스 검색</p>
+            <form method="get" action="/" class="search-form">
+                <input type="text" name="query" placeholder="검색어를 입력해 주세요." class="search-input" required>
+
+                <button type="submit" class="search-button">
+                    <img src="https://svgsilh.com/png-512/1093183.png" alt="검색"/>
+                </button>
+                <select name="field" class="search-select">
+                    <option value="title">제목</option>
+                    <option value="journalist">기자</option>
+                    <option value="summary">내용</option>
+                    <option value="press">언론사</option>
+                </select>
+            </form>
+            <button id="close-search-modal" class="close-btn">✕</button>
+        </div>
+    </div>
 
     <nav>
         <a href="/home" class="{{ 'active' if selected_category == '홈' else '' }}">홈</a>
@@ -519,5 +692,15 @@
         {% block content %}{% endblock %}
     </div>
 </body>
+
+<script>
+    document.getElementById("open-search-modal").onclick = function () {
+        document.getElementById("search-modal").style.display = "flex";
+    };
+    document.getElementById("close-search-modal").onclick = function () {
+        document.getElementById("search-modal").style.display = "none";
+    };
+
+</script>
 
 </html>
