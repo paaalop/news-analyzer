@@ -16,7 +16,7 @@ def create_app():
     app = Flask(__name__)
 
     press_logos = {}
-    with open("app\logo_data.txt", "r", encoding="utf-8") as f:
+    with open("app/logo_data.txt", "r", encoding="utf-8") as f:
         raw_data = f.read()
 
     for line in raw_data.splitlines():
