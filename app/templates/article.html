@@ -1,28 +1,33 @@
 {% extends 'base.html' %} {# base.html 상속 #}
 
 {% block content %}
-<h1 class="article-detail-title">{{ article['title'] }}</h1>
+<div class="container">
+    <h1 class="article-detail-title">{{ article['title'] }}</h1>
 
-<div class="article-detail-meta">
-    <span><strong>카테고리:</strong> {{ article.get('subcategory', '미분류') }}</span>
-    <span><strong>언론사:</strong> {{ article['press'] }}</span>
-    <span><strong>기자:</strong> {{ article['journalist'] }}</span>
-    <span><strong>발행시간:</strong> {{ article['publish_time'] }}</span>
+    <div class="article-detail-meta">
+        <span><strong>카테고리:</strong> {{ article.get('subcategory', '미분류') }}</span>
+        <span><strong>언론사:</strong> {{ article['press'] }}</span>
+        <span><strong>기자:</strong> {{ article['journalist'] }}</span>
+        <span><strong>발행시간:</strong> {{ article['publish_time'] }}</span>
+        <div class="article-item" style="margin-left: 0;">
+            <div class="relevance-dot" style="--relevance-hue: {{ article.relevance_hue }}">
+                {{ article['relevance_score'] }}
+            </div>
+            <div class="stimulus-dot" style="--stimulus-hue: {{ article.stimulus_hue }}">
+                {{ article['headline_score'] }}
+            </div>
+        </div>
+    </div>
 </div>
 
-<hr class="section-divider">
-
-<div class="article-detail-summary-block">
-    <strong>요약:</strong>
-    <p>{{ article['summary'] }}</p>
+<div class="container">
+    <div class="article-detail-summary-block">
+        <p style="margin: 0px;">{{ article['summary'] }}</p>
+    </div>
 </div>
-
-<hr class="section-divider">
-
-<div class="article-detail-content">
-    <p><strong>자극성(10점):</strong> {{ article['headline_score'] }}</p>
-    <p><strong>연관성(100점):</strong> {{ article['relevance_score'] }}</p>
+<div class="container">
+    <div class="article-detail-summary-block" style="font-weight: bold;">원문 링크
+        <a href="{{ article['link'] }}" class="back-link"> {{ article['link'] }}</a>
+    </div>
 </div>
-
-<a href="/" class="back-link">← 목록으로 돌아가기</a>
 {% endblock %}

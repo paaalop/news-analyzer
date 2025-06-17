@@ -65,26 +65,46 @@ def fetch_article_details(url):
     }
 
 # GPT 요약
-def gpt_summarize(text):
-    prompt = f"""
-다음은 뉴스 기사 전문이다. 이 내용을 한국어로 **핵심만 요약하라.**
+import textwrap
+from openai import OpenAI
 
-- 홍보성 문장, 배경 설명은 생략하고 **핵심 사실 위주**로 요약하라.
-- **최대 3문장 이내**로 요약할 것.
-- 기사 스타일을 따라하지 마라. **객관적 요약문**으로 작성하라.
+client = OpenAI()                 # 이미 생성해둔 객체면 필요 없음
+model_version = "gpt-4o-mini"     # 사용 중인 모델
 
-기사 전문:
-{text}
-"""
+def gpt_summarize(text: str) -> str:
+    prompt = textwrap.dedent(f"""
+        다음은 뉴스 기사 전문이다. 이 내용을 한국어로 **핵심만 요약**하라.
+
+        - 홍보성 문장, 배경 설명은 생략하고 **핵심 사실**만 남긴다.  
+        - **최대 5문장**으로 요약하며 **각 문장 뒤에 실제 줄바꿈(LF)을 두 번** 넣어라.  
+          \\n 문자를 쓰지 말 것.  
+        - 기사 스타일을 따라하지 말고 **객관적 요약문**으로 작성하라.
+
+        <출력 예시 — 실제 개행 두 번>
+        예시문장 1.
+
+        예시문장 2.
+
+        예시문장 3.
+
+        ───────────────────────
+        기사 전문:
+        {text}
+    """).strip()
+
     res = client.chat.completions.create(
         model=model_version,
         messages=[
-            {"role": "system", "content": "너는 핵심 정보만 요약하는 뉴스 요약기다."},
+            {"role": "system",
+             "content": "너는 핵심 정보만 요약하는 뉴스 요약기다."},
             {"role": "user", "content": prompt}
         ],
         temperature=0.3,
     )
+
+    # 결과에는 이미 LF가 들어 있으므로 그대로 반환
     return res.choices[0].message.content.strip()
+
 
 
 # GPT 카테고리 분류

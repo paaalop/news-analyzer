@@ -84,6 +84,16 @@ def create_app():
         article = cur.fetchone()
         cur.close()
         conn.close()
+        if article:
+            relevance = (article.get("relevance_score", 0) / 75) * 100
+            if relevance > 100:
+                relevance = 100
+            elif relevance < 0:
+                relevance = 0
+            article["relevance_score"] = int(relevance)
+            stimulus = article.get("headline_score", 0)
+            article["relevance_hue"] = 120 * ((relevance) / 100)
+            article["stimulus_hue"] = 120 - (stimulus / 10) * 120
         return article
     
     def get_summary_from_db(): #데이터베이스에서 요약 가져오기 추가했습니다

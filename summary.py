@@ -45,27 +45,28 @@ if not summaries:
     exit()
 
 # --- 임베딩 함수 ---
-def get_embedding(text):
-    try:
-        res = client.embeddings.create(model=embedding_model, input=text)
-        return np.array(res.data[0].embedding)
-    except Exception as e:
-        print(f"[임베딩 오류] {e}")
-        return None
+def get_embeddings(texts, batch=100):
+    #summaries 리스트를 batch 크기씩 나눠 한 번에 임베딩
+    embs = []
+    for i in range(0, len(texts), batch):
+        chunk = texts[i:i+batch]
+        res = client.embeddings.create(model=embedding_model,
+                                       input=chunk).data
+        embs.extend([np.array(r.embedding, dtype=np.float32) for r in res])
+    return np.vstack(embs)                    # (N, d) ndarray
 
-def cosine_sim(v1, v2):
-    return dot(v1, v2) / (norm(v1) * norm(v2))
 
 # --- 군집화 ---
-clusters = []
-emb_matrix = []  # 전체 클러스터 임베딩 벡터 모음
+# 1. 임베딩 추출 + 정규화
+A = get_embeddings(summaries)
+A /= np.linalg.norm(A, axis=1, keepdims=True)
 
-for i, summary in enumerate(summaries):
-    print(f"[{i+1}/{len(summaries)}] 군집화 중")
-    emb = get_embedding(summary)
-    if emb is None:
-        print(f"[{i+1}] 임베딩 실패 → 건너뜀")
-        continue
+clusters = []
+emb_matrix = []
+
+for i in range(len(summaries)):
+    emb = A[i]
+    summary = summaries[i]
 
     if not clusters:
         clusters.append({"summary": summary, "embedding": emb, "count": 1, "extras": []})
@@ -74,20 +75,18 @@ for i, summary in enumerate(summaries):
 
     emb_matrix_np = np.array(emb_matrix)
     norms = np.linalg.norm(emb_matrix_np, axis=1)
-    target_norm = norm(emb)
-    sims = np.dot(emb_matrix_np, emb) / (norms * target_norm)
+    sim = np.dot(emb_matrix_np, emb) / (norms * np.linalg.norm(emb))
 
-    best_index = np.argmax(sims)
-    best_sim = sims[best_index]
-    print(f" - 최고 유사도: {best_sim:.3f}")
+    best_idx = np.argmax(sim)
+    best_sim = sim[best_idx]
 
     if best_sim >= 0.75:
-        clusters[best_index]["count"] += 1
-        clusters[best_index]["extras"].append(summary)
+        clusters[best_idx]["count"] += 1
+        clusters[best_idx]["extras"].append(summary)
     else:
         clusters.append({"summary": summary, "embedding": emb, "count": 1, "extras": []})
         emb_matrix.append(emb)
-        print(f" - 새 클러스터 생성 (총 {len(clusters)}개)")
+
 
 # --- 클러스터 정렬 ---
 clusters.sort(key=lambda x: x["count"], reverse=True)

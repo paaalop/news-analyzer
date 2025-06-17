@@ -2,25 +2,34 @@
 
 {% block content %}
 
-<div class="summary-content">
-    <h2>어제 요약</h2>
+<div class="summary-container">
+    <div class="summary-header">
+        어제 요약
+        <div style="margin-left: 20px;">{{ selected_summary.summary_date }}</div>
+    </div>
 
     <!-- 날짜 선택 폼 캘린더로로-->
-    <form method="get" action="/summary" style="margin-bottom: 20px;">
-        <label for="date-input"><strong>날짜 선택:</strong></label>
-        <input type="date" name="date" id="date-input" value="{{ selected_date }}">
-        <button type="submit">검색
-        </button>
+    <form id="summary-form" action="/summary" method="get" class="date-form">
+        <label for="date-input" class="date-label">날짜 선택</label>
+        <input type="date" id="date-input" name="date" value="{{ selected_date }}" class="date-picker"> 
+        <button type="submit" class="visually-hidden">검색</button><!-- submit 버튼은 백업용으로 두되 화면엔 숨김 -->
     </form>
+</div>
 
-
+<div class="container">
     {% if selected_summary %}
-        <div class="summary-list-item">
-            <h3>{{ selected_summary.summary_date }}</h3>
-            <div>{{ selected_summary.summary | safe }}</div>
-        </div>
+    <div class="summary-list-item">
+        
+        <div>{{ selected_summary.summary | safe }}</div>
+    </div>
     {% else %}
-        <p>해당 일자 요약이 없습니다.</p>
+    <p>해당 일자 요약이 없습니다.</p>
     {% endif %}
 </div>
+
+<!-- 날짜 바뀌면 자동 submit -->
+<script>
+  document.getElementById('date-input')
+    .addEventListener('change', e => e.target.form.submit());
+</script>
 {% endblock %}
