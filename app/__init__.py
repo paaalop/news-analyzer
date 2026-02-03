@@ -26,14 +26,18 @@ def create_app():
             press_logos[name.strip()] = url.strip()
 
     def get_db_connection():
-        return pymysql.connect(
-            host=os.getenv("DB_HOST"),
-            port=int(os.getenv("DB_PORT")),
-            user=os.getenv("DB_USER"),
-            password=os.getenv("DB_PASSWORD"),
-            database=os.getenv("DB_NAME"),
-            ssl={'ca': certifi.where()}
-        )
+        try:
+            return pymysql.connect(
+                host=os.getenv("DB_HOST"),
+                port=int(os.getenv("DB_PORT", 4000)),
+                user=os.getenv("DB_USER"),
+                password=os.getenv("DB_PASSWORD"),
+                database=os.getenv("DB_NAME"),
+                ssl={'ca': certifi.where()}
+            )
+        except Exception as e:
+            print(f"Database Connection Error: {e}")
+            raise e
 
 
     def get_articles_from_db(category, page, per_page=10, query=None, field=None):
