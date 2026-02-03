@@ -1,6 +1,7 @@
 import os
 import pymysql
 import datetime
+import certifi
 from dotenv import load_dotenv
 from flask import Flask, render_template, request
 
@@ -31,7 +32,7 @@ def create_app():
             user=os.getenv("DB_USER"),
             password=os.getenv("DB_PASSWORD"),
             database=os.getenv("DB_NAME"),
-            ssl={'ca': '/etc/ssl/certs/ca-certificates.crt'} if os.path.exists('/etc/ssl/certs/ca-certificates.crt') else None
+            ssl={'ca': certifi.where()}
         )
 
 
